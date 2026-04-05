@@ -1,0 +1,63 @@
+{
+  "id": "blockonomics-merchant-assistant",
+  "name": "Blockonomics Merchant Assistant",
+  "version": "1.0.0",
+  "description": "AI-powered chat sidebar for Blockonomics merchants. Helps with payment troubleshooting, store setup, fee monitoring, and Bitcoin marketing — directly inside your dashboard.",
+  "author": "Blockonomics",
+  "license": "MIT",
+  "homepage": "https://www.blockonomics.co",
+
+  "entry": {
+    "backend": "main.py",
+    "embed_script": "/embed.js",
+    "widget_url": "/widget",
+    "ucp_manifest": "/.well-known/ucp"
+  },
+
+  "requirements": {
+    "python": ">=3.10",
+    "packages": "requirements.txt"
+  },
+
+  "env_required": [
+    "AZURE_OPENAI_API_KEY",
+    "BLOCKONOMICS_API_KEY",
+    "BLOCKONOMICS_WEBHOOK_SECRET"
+  ],
+  "env_optional": [
+    "MERCHANT_URL",
+    "MERCHANT_NAME",
+    "MERCHANT_DESCRIPTION",
+    "SUPPORT_EMAIL"
+  ],
+
+  "embed": {
+    "snippet": "<script src=\"{MERCHANT_URL}/embed.js\" data-api=\"{MERCHANT_URL}\" data-position=\"bottom-right\" data-label=\"Assistant\"></script>",
+    "instructions": "Paste the snippet above just before </body> in your merchant dashboard HTML. Replace {MERCHANT_URL} with the URL where this backend is running."
+  },
+
+  "capabilities": [
+    "payment-troubleshooting",
+    "fee-monitoring",
+    "transaction-lookup",
+    "underpayment-detection",
+    "stuck-tx-diagnosis",
+    "platform-setup-guide",
+    "code-generation",
+    "ucp-manifest-generation",
+    "marketing-score",
+    "onchain-proof-marketing",
+    "webhook-receiver",
+    "blockonomics-api-proxy"
+  ],
+
+  "routes": {
+    "GET  /health":                   "Health check",
+    "POST /api/chat":                 "Main chat endpoint (Azure OpenAI agent)",
+    "GET  /widget":                   "Embeddable sidebar widget HTML",
+    "GET  /embed.js":                 "Drop-in embed script",
+    "GET  /.well-known/ucp":          "UCP merchant manifest (JSON-LD)",
+    "GET  /webhook/blockonomics":     "Blockonomics payment webhook receiver",
+    "GET  /webhook/blockonomics/events": "Recent webhook events (debug)"
+  }
+}

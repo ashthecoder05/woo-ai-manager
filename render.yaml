@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: blocko-agent
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # upgrade to standard for production traffic
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false        # set manually in Render dashboard — never commit
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_DEPLOYMENT
+        value: gpt-5-chat
+      - key: AZURE_OPENAI_API_VERSION
+        value: "2025-01-01-preview"
+      - key: BLOCKONOMICS_API_KEY
+        sync: false
+      - key: BLOCKONOMICS_WEBHOOK_SECRET
+        sync: false
+      - key: MERCHANT_URL
+        sync: false        # set to your actual domain e.g. https://blockoagent.com
+      - key: MERCHANT_NAME
+        value: "Blocko Agent"
+      - key: SUPPORT_EMAIL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false        # e.g. https://blockoagent.com,https://www.blockoagent.com
+      - key: GOOGLE_CLIENT_ID
+        sync: false        # from Google Cloud Console
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1

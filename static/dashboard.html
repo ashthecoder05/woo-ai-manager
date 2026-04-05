@@ -171,6 +171,49 @@
 
     /* EMPTY / LOADING */
     .loading { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 2rem 0; }
+
+    /* PAGE TABS */
+    .page-tabs {
+      display: flex; gap: 0.25rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    .page-tab {
+      padding: 0.6rem 1.2rem; font-size: 0.875rem; font-weight: 500;
+      background: none; border: none; color: var(--muted);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -1px; transition: color 0.15s, border-color 0.15s;
+    }
+    .page-tab:hover { color: var(--text); }
+    .page-tab.active { color: var(--orange); border-bottom-color: var(--orange); font-weight: 600; }
+    .page-panel { display: none; }
+    .page-panel.active { display: block; }
+
+    /* CONFIGURE FORM */
+    .config-section { margin-bottom: 1.75rem; }
+    .config-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.75rem; display:block; }
+    .config-opts { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .config-opt {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 1rem; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--card);
+      color: var(--muted); font-size: 0.82rem; cursor: pointer;
+      transition: all 0.15s; user-select: none;
+    }
+    .config-opt:hover { border-color: #444; color: var(--text); }
+    .config-opt.selected { border-color: var(--orange); color: var(--text); background: rgba(247,147,26,0.08); }
+    .config-opt .chk { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid #555; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:9px; }
+    .config-opt.selected .chk { background: var(--orange); border-color: var(--orange); color:#000; }
+    .save-btn {
+      background: var(--orange); color: #000; border: none; border-radius: 10px;
+      padding: 0.65rem 2rem; font-size: 0.875rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; margin-top: 0.5rem;
+    }
+    .save-btn:hover { background: var(--orange2); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-msg { font-size: 0.8rem; margin-top: 0.75rem; min-height: 1.2em; }
+    .save-msg.ok  { color: var(--green); }
+    .save-msg.err { color: #f55; }
   </style>
 </head>
 <body>
@@ -195,137 +238,169 @@
     <p id="merchant-since" style="color:var(--muted);font-size:0.88rem;">Your Blocko Agent dashboard</p>
   </div>
 
-  <!-- Stats row -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Gateway</div>
-      <div class="stat-value orange" id="stat-gateway">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Platforms</div>
-      <div id="stat-platforms" class="stat-value" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.1rem;">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Assistant</div>
-      <div class="stat-value green" id="stat-assistant">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Status</div>
-      <div class="stat-value" style="display:flex;align-items:center;gap:0.5rem;">
-        <span class="live-dot"></span>
-        <span style="color:var(--green);font-size:0.9rem;">Active</span>
-      </div>
-    </div>
+  <!-- Page Tabs -->
+  <div class="page-tabs">
+    <button class="page-tab active" onclick="switchTab('overview', this)">Overview</button>
+    <button class="page-tab" onclick="switchTab('configure', this)">Configure</button>
   </div>
 
-  <!-- Row 1: Profile + Setup -->
-  <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.25rem;margin-bottom:1.25rem;">
+  <!-- ── OVERVIEW PANEL ─────────────────────────────────────────── -->
+  <div id="panel-overview" class="page-panel active">
 
-    <!-- Merchant Profile -->
-    <div class="card">
-      <div class="card-title"><span class="dot"></span> Merchant Profile</div>
-      <div class="profile-row">
-        <span class="profile-key">Email</span>
-        <span class="profile-val" id="p-email">—</span>
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Gateways</div>
+        <div id="stat-gateway" class="stat-value" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.1rem;">—</div>
       </div>
-      <div class="profile-row">
-        <span class="profile-key">Name</span>
-        <span class="profile-val" id="p-name">—</span>
+      <div class="stat-card">
+        <div class="stat-label">Platforms</div>
+        <div id="stat-platforms" class="stat-value" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.1rem;">—</div>
       </div>
-      <div class="profile-row">
-        <span class="profile-key">Member since</span>
-        <span class="profile-val" id="p-since">—</span>
+      <div class="stat-card">
+        <div class="stat-label">Assistant</div>
+        <div class="stat-value green" id="stat-assistant">—</div>
       </div>
-    </div>
-
-    <!-- Setup / Embed -->
-    <div class="card">
-      <div class="card-title"><span class="dot"></span> Embed Setup</div>
-      <div class="snippet-box">
-        <code class="snippet-code" id="snippet-code"></code>
-        <button class="copy-btn" onclick="copySnippet()">Copy</button>
-      </div>
-      <div class="plat-tabs" id="plat-tabs"></div>
-      <div id="instr-panel" class="instr">
-        <div id="dinstr-plugin" style="display:none;">
-          <strong>Plugin (WooCommerce / Shopify / PrestaShop)</strong><br/><br/>
-          <strong>WooCommerce:</strong> <code>Appearance → Theme Editor → footer.php</code> — paste before <code>&lt;/body&gt;</code><br/><br/>
-          <strong>Shopify:</strong> <code>Online Store → Themes → Edit code → theme.liquid</code> — paste before <code>&lt;/body&gt;</code><br/><br/>
-          <strong>PrestaShop:</strong> <code>Design → Theme & Logo → Advanced customisation</code> — edit <code>footer.tpl</code>
-        </div>
-        <div id="dinstr-api" style="display:none;">
-          <strong>API (FastAPI / Flask / Django / Express)</strong><br/><br/>
-          1. Open your main layout/template file<br/>
-          2. Find <code>&lt;/body&gt;</code> and paste the snippet just above it<br/>
-          3. Redeploy — the <span class="hi">₿ Assistant</span> button will appear<br/><br/>
-          <strong>FastAPI/Flask:</strong> add to <code>base.html</code> &nbsp;|&nbsp; <strong>Django:</strong> inside <code>{% block extrascripts %}</code> &nbsp;|&nbsp; <strong>Express:</strong> <code>layout.ejs</code>
-        </div>
-        <div id="dinstr-custom" style="display:none;">
-          <strong>Custom Website</strong><br/><br/>
-          1. Open your admin/checkout page (e.g. <code>admin.html</code>)<br/>
-          2. Find <code>&lt;/body&gt;</code> at the bottom<br/>
-          3. Paste the snippet just above it — save and refresh<br/><br/>
-          <strong>Tip:</strong> Add only to your merchant admin page, not the public storefront.
-        </div>
-        <div id="dinstr-default">
-          1. Open your page file in a text editor<br/>
-          2. Find <code>&lt;/body&gt;</code> at the bottom and paste the snippet above it<br/>
-          3. Save and refresh — a <span class="hi">₿ Assistant</span> button appears in the bottom-right
+      <div class="stat-card">
+        <div class="stat-label">Status</div>
+        <div class="stat-value" style="display:flex;align-items:center;gap:0.5rem;">
+          <span class="live-dot"></span>
+          <span style="color:var(--green);font-size:0.9rem;">Active</span>
         </div>
       </div>
     </div>
 
-  </div>
+    <!-- Profile + Setup -->
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.25rem;margin-bottom:1.25rem;">
 
-  <!-- Row 2: Features -->
-  <div class="card" style="margin-bottom:1.25rem;">
-    <div class="card-title"><span class="dot"></span> Agent Capabilities</div>
-    <div class="features-grid">
-      <div class="feature-item">
-        <div class="feature-icon">📡</div>
-        <div>
-          <div class="feature-name">Gateway Updates</div>
-          <div class="feature-desc">Real-time release notes and changelogs for Blockonomics, Coinbase, BitPay, Stripe, NOWPayments and CoinGate — always up to date.</div>
+      <div class="card">
+        <div class="card-title"><span class="dot"></span> Merchant Profile</div>
+        <div class="profile-row">
+          <span class="profile-key">Email</span>
+          <span class="profile-val" id="p-email">—</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-key">Name</span>
+          <span class="profile-val" id="p-name">—</span>
+        </div>
+        <div class="profile-row">
+          <span class="profile-key">Member since</span>
+          <span class="profile-val" id="p-since">—</span>
         </div>
       </div>
-      <div class="feature-item">
-        <div class="feature-icon">🚀</div>
-        <div>
-          <div class="feature-name">Onboarding Guides</div>
-          <div class="feature-desc">Step-by-step setup for Plugin, API, and Custom integrations across all 6 gateways. Code snippets and webhook formats included.</div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot"></span> Embed Setup</div>
+        <div class="snippet-box">
+          <code class="snippet-code" id="snippet-code"></code>
+          <button class="copy-btn" onclick="copySnippet()">Copy</button>
+        </div>
+        <div class="plat-tabs" id="plat-tabs"></div>
+        <div id="instr-panel" class="instr">
+          <div id="dinstr-plugin" style="display:none;">
+            <strong>Plugin (WooCommerce / Shopify / PrestaShop)</strong><br/><br/>
+            <strong>WooCommerce:</strong> <code>Appearance → Theme Editor → footer.php</code> — paste before <code>&lt;/body&gt;</code><br/><br/>
+            <strong>Shopify:</strong> <code>Online Store → Themes → Edit code → theme.liquid</code> — paste before <code>&lt;/body&gt;</code><br/><br/>
+            <strong>PrestaShop:</strong> <code>Design → Theme & Logo → Advanced customisation</code> — edit <code>footer.tpl</code>
+          </div>
+          <div id="dinstr-api" style="display:none;">
+            <strong>API (FastAPI / Flask / Django / Express)</strong><br/><br/>
+            1. Open your main layout/template file<br/>
+            2. Find <code>&lt;/body&gt;</code> and paste the snippet just above it<br/>
+            3. Redeploy — the <span class="hi">₿ Assistant</span> button will appear<br/><br/>
+            <strong>FastAPI/Flask:</strong> add to <code>base.html</code> &nbsp;|&nbsp; <strong>Django:</strong> inside <code>{% block extrascripts %}</code> &nbsp;|&nbsp; <strong>Express:</strong> <code>layout.ejs</code>
+          </div>
+          <div id="dinstr-custom" style="display:none;">
+            <strong>Custom Website</strong><br/><br/>
+            1. Open your admin/checkout page (e.g. <code>admin.html</code>)<br/>
+            2. Find <code>&lt;/body&gt;</code> at the bottom<br/>
+            3. Paste the snippet just above it — save and refresh<br/><br/>
+            <strong>Tip:</strong> Add only to your merchant admin page, not the public storefront.
+          </div>
+          <div id="dinstr-default">
+            1. Open your page file in a text editor<br/>
+            2. Find <code>&lt;/body&gt;</code> at the bottom and paste the snippet above it<br/>
+            3. Save and refresh — a <span class="hi">₿ Assistant</span> button appears in the bottom-right
+          </div>
         </div>
       </div>
-      <div class="feature-item">
-        <div class="feature-icon">🔧</div>
-        <div>
-          <div class="feature-name">Troubleshooting</div>
-          <div class="feature-desc">Plain-English issue diagnosis and resolution steps for common Bitcoin payment problems — built for non-technical merchants.</div>
+
+    </div>
+
+    <!-- Agent Capabilities -->
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-title"><span class="dot"></span> Agent Capabilities</div>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">📡</div>
+          <div><div class="feature-name">Gateway Updates</div><div class="feature-desc">Real-time release notes and changelogs for Blockonomics, Coinbase, BitPay, Stripe, NOWPayments and CoinGate.</div></div>
         </div>
-      </div>
-      <div class="feature-item">
-        <div class="feature-icon">🔍</div>
-        <div>
-          <div class="feature-name">Transaction Verification</div>
-          <div class="feature-desc">Live mempool.space lookups by TXID or address — confirms payments, detects scams, and shows real-time confirmations.</div>
+        <div class="feature-item">
+          <div class="feature-icon">🚀</div>
+          <div><div class="feature-name">Onboarding Guides</div><div class="feature-desc">Step-by-step setup for Plugin, API, and Custom integrations across all 6 gateways.</div></div>
         </div>
-      </div>
-      <div class="feature-item">
-        <div class="feature-icon">⛽</div>
-        <div>
-          <div class="feature-name">Fee Advisor</div>
-          <div class="feature-desc">Explains Bitcoin network fees, calculates impact by product price range, and guides merchants on when to adjust fee strategy.</div>
+        <div class="feature-item">
+          <div class="feature-icon">🔧</div>
+          <div><div class="feature-name">Troubleshooting</div><div class="feature-desc">Plain-English issue diagnosis and resolution steps for common Bitcoin payment problems.</div></div>
         </div>
-      </div>
-      <div class="feature-item">
-        <div class="feature-icon">🤖</div>
-        <div>
-          <div class="feature-name">UCP Manifests</div>
-          <div class="feature-desc">Generates Universal Commerce Protocol manifests for agentic commerce discovery — ready for all 6 payment gateways.</div>
+        <div class="feature-item">
+          <div class="feature-icon">🔍</div>
+          <div><div class="feature-name">Transaction Verification</div><div class="feature-desc">Live mempool.space lookups by TXID or address — confirms payments and detects scams.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">⛽</div>
+          <div><div class="feature-name">Fee Advisor</div><div class="feature-desc">Explains Bitcoin network fees and guides merchants on when and how to adjust fee strategy.</div></div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🤖</div>
+          <div><div class="feature-name">UCP Manifests</div><div class="feature-desc">Generates Universal Commerce Protocol manifests for agentic commerce discovery.</div></div>
         </div>
       </div>
     </div>
-  </div>
 
+  </div><!-- /panel-overview -->
+
+  <!-- ── CONFIGURE PANEL ────────────────────────────────────────── -->
+  <div id="panel-configure" class="page-panel">
+    <div class="card" style="max-width:640px;">
+      <div class="card-title"><span class="dot"></span> Update Your Configuration</div>
+
+      <!-- Gateway -->
+      <div class="config-section">
+        <span class="config-label">Payment Gateway</span>
+        <div class="config-opts" id="cfg-gateway">
+          <div class="config-opt" data-v="blockonomics" onclick="toggleMulti(this)"><span class="chk">✓</span> 🟠 Blockonomics</div>
+          <div class="config-opt" data-v="coinbase"     onclick="toggleMulti(this)"><span class="chk">✓</span> 🔵 Coinbase</div>
+          <div class="config-opt" data-v="bitpay"       onclick="toggleMulti(this)"><span class="chk">✓</span> 💜 BitPay</div>
+          <div class="config-opt" data-v="stripe"       onclick="toggleMulti(this)"><span class="chk">✓</span> 🟣 Stripe</div>
+          <div class="config-opt" data-v="nowpayments"  onclick="toggleMulti(this)"><span class="chk">✓</span> 🟡 NOWPayments</div>
+          <div class="config-opt" data-v="coingate"     onclick="toggleMulti(this)"><span class="chk">✓</span> 🟢 CoinGate</div>
+        </div>
+      </div>
+
+      <!-- Platforms -->
+      <div class="config-section">
+        <span class="config-label">Integration Platform <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#555;font-size:0.72rem;">(multi-select)</span></span>
+        <div class="config-opts" id="cfg-platforms">
+          <div class="config-opt" data-v="plugin" onclick="toggleMulti(this)"><span class="chk">✓</span> 🔌 Plugin</div>
+          <div class="config-opt" data-v="api"    onclick="toggleMulti(this)"><span class="chk">✓</span> ⚡ API</div>
+          <div class="config-opt" data-v="custom" onclick="toggleMulti(this)"><span class="chk">✓</span> 🛠 Custom</div>
+        </div>
+      </div>
+
+      <!-- Assistant channel -->
+      <div class="config-section">
+        <span class="config-label">Assistant Channel</span>
+        <div class="config-opts" id="cfg-assistant">
+          <div class="config-opt" data-v="dash"     onclick="selectSingle('cfg-assistant',this)"><span class="chk">✓</span> 🖥 Merchant Dashboard</div>
+          <div class="config-opt" data-v="telegram" onclick="selectSingle('cfg-assistant',this)"><span class="chk">✓</span> ✈️ Telegram</div>
+        </div>
+      </div>
+
+      <button class="save-btn" id="save-cfg-btn" onclick="saveConfig()">Save Changes</button>
+      <div class="save-msg" id="save-cfg-msg"></div>
+    </div>
+  </div><!-- /panel-configure -->
 
 </div>
 
@@ -354,9 +429,10 @@
   }
 
   function renderDashboard() {
-    const name    = merchant.name || merchant.email.split('@')[0];
-    const gateway = GATEWAYS[merchant.gateway] || merchant.gateway || 'Not set';
-    const plats   = Array.isArray(merchant.platforms) ? merchant.platforms : (merchant.platforms ? merchant.platforms.split(',') : []);
+    const name     = merchant.name || merchant.email.split('@')[0];
+    const gateways = Array.isArray(merchant.gateways) ? merchant.gateways
+                   : (merchant.gateway ? merchant.gateway.split(',') : []);
+    const plats    = Array.isArray(merchant.platforms) ? merchant.platforms : (merchant.platforms ? merchant.platforms.split(',') : []);
     const asst    = merchant.assistant === 'telegram' ? 'Telegram Bot' : 'Merchant Dashboard';
     // Use created_at from server, or fall back to stored join date, or record today
     if (!merchant.created_at) {
@@ -375,7 +451,16 @@
     document.getElementById('merchant-since').textContent = 'Blocko Agent Merchant';
 
     // Stats
-    document.getElementById('stat-gateway').textContent   = gateway;
+    const gwEl = document.getElementById('stat-gateway');
+    gwEl.innerHTML = '';
+    if (gateways.length > 0) {
+      gateways.forEach(g => {
+        const b = document.createElement('span');
+        b.className = 'stat-pill';
+        b.textContent = GATEWAYS[g] || g;
+        gwEl.appendChild(b);
+      });
+    } else { gwEl.textContent = 'Not set'; }
     document.getElementById('stat-assistant').textContent = asst;
     const pp = document.getElementById('stat-platforms');
     pp.innerHTML = '';
@@ -457,7 +542,83 @@
 
   function logout() {
     localStorage.removeItem('blocko_merchant');
+    localStorage.removeItem('blocko_joined');
+    localStorage.removeItem('blocko_copied');
     window.location.href = '/';
+  }
+
+  // ── Page tabs ────────────────────────────────────────────────────────────
+  function switchTab(id, btn) {
+    document.querySelectorAll('.page-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.page-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + id).classList.add('active');
+    btn.classList.add('active');
+    if (id === 'configure') populateConfigForm();
+  }
+
+  // ── Configure form helpers ───────────────────────────────────────────────
+  function selectSingle(groupId, el) {
+    document.querySelectorAll('#' + groupId + ' .config-opt').forEach(o => o.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function toggleMulti(el) {
+    el.classList.toggle('selected');
+  }
+
+  function populateConfigForm() {
+    if (!merchant) return;
+    const plats = Array.isArray(merchant.platforms) ? merchant.platforms
+                : (merchant.platforms ? merchant.platforms.split(',') : []);
+
+    // Gateway — multi select
+    const gwArr = Array.isArray(merchant.gateways) ? merchant.gateways
+                : (merchant.gateway ? merchant.gateway.split(',') : []);
+    document.querySelectorAll('#cfg-gateway .config-opt').forEach(o => {
+      o.classList.toggle('selected', gwArr.includes(o.dataset.v));
+    });
+    // Platforms — multi select
+    document.querySelectorAll('#cfg-platforms .config-opt').forEach(o => {
+      o.classList.toggle('selected', plats.includes(o.dataset.v));
+    });
+    // Assistant — single select
+    document.querySelectorAll('#cfg-assistant .config-opt').forEach(o => {
+      o.classList.toggle('selected', o.dataset.v === (merchant.assistant || 'dash'));
+    });
+  }
+
+  async function saveConfig() {
+    const btn = document.getElementById('save-cfg-btn');
+    const msg = document.getElementById('save-cfg-msg');
+    const gateways  = [...document.querySelectorAll('#cfg-gateway .config-opt.selected')].map(o => o.dataset.v);
+    const assistant = document.querySelector('#cfg-assistant .config-opt.selected')?.dataset.v || merchant.assistant || 'dash';
+    const platforms = [...document.querySelectorAll('#cfg-platforms .config-opt.selected')].map(o => o.dataset.v);
+
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    msg.textContent = '';
+    msg.className = 'save-msg';
+
+    try {
+      const res = await fetch('/api/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: merchant.email, name: merchant.name, gateways, platforms, assistant }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      merchant = data.merchant;
+      localStorage.setItem('blocko_merchant', JSON.stringify(merchant));
+      renderDashboard();
+      msg.textContent = '✓ Changes saved successfully.';
+      msg.className = 'save-msg ok';
+    } catch(e) {
+      msg.textContent = 'Failed to save. Please try again.';
+      msg.className = 'save-msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Save Changes';
+    }
   }
 
   loadDashboard();
