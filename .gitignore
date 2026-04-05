@@ -1,0 +1,46 @@
+# Environment & secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+
+# Database
+data/
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Docker
+.dockerignore
+
+# Coverage / testing
+.coverage
+htmlcov/
+.pytest_cache/
