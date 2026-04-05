@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BitBooks — Admin Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111; --card: #161616;
+      --border: #222; --orange: #f7931a; --text: #f0f0f0; --muted: #888;
+    }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 1.1rem; font-weight: 800; }
+    .logo span { color: var(--orange); }
+    .nav-right { display: flex; align-items: center; gap: 1rem; }
+    .admin-badge {
+      padding: 0.25rem 0.7rem; border-radius: 6px;
+      background: rgba(247,147,26,0.1); border: 1px solid rgba(247,147,26,0.3);
+      color: var(--orange); font-size: 0.75rem; font-weight: 600;
+    }
+    .store-link {
+      font-size: 0.82rem; color: var(--muted); text-decoration: none;
+    }
+    .store-link:hover { color: var(--text); }
+
+    /* LAYOUT */
+    .layout { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 60px); }
+
+    /* SIDEBAR */
+    .sidebar {
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 1.5rem 0;
+    }
+    .sidebar-title {
+      padding: 0 1rem 0.5rem; font-size: 0.65rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted);
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.55rem 1rem; font-size: 0.82rem; color: var(--muted);
+      cursor: pointer; transition: all 0.15s; text-decoration: none;
+    }
+    .sidebar-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .sidebar-item.active { color: var(--orange); background: rgba(247,147,26,0.06); }
+
+    /* MAIN */
+    main { padding: 2rem; overflow-y: auto; }
+    .page-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .page-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 2rem; }
+
+    /* STATS ROW */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.1rem;
+    }
+    .stat-label { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .stat-value { font-size: 1.4rem; font-weight: 800; color: var(--text); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-change { font-size: 0.7rem; color: #22c55e; margin-top: 0.2rem; }
+
+    /* TABLE */
+    .section-title { font-size: 0.85rem; font-weight: 600; color: var(--muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .table-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; margin-bottom: 2rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { padding: 0.75rem 1rem; text-align: left; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
+    td { padding: 0.75rem 1rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+    td:last-child, th:last-child { border-bottom: none; }
+    tr:last-child td { border-bottom: none; }
+    .val { color: var(--text); font-family: monospace; }
+    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 100px; font-size: 0.68rem; font-weight: 600; }
+    .conf { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .pend { background: rgba(247,147,26,0.12); color: var(--orange); }
+    .memp { background: rgba(150,150,150,0.12); color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">₿it<span>Books</span></div>
+  <div class="nav-right">
+    <span class="admin-badge">Admin</span>
+    <a href="index.html" class="store-link">← View store</a>
+  </div>
+</nav>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-title">Dashboard</div>
+    <a class="sidebar-item active">📊 Payments</a>
+    <a class="sidebar-item">📦 Orders</a>
+    <a class="sidebar-item">📚 Books</a>
+    <div class="sidebar-title" style="margin-top:1.5rem">Bitcoin</div>
+    <a class="sidebar-item">💼 Wallet</a>
+    <a class="sidebar-item">🔗 Webhooks</a>
+    <div class="sidebar-title" style="margin-top:1.5rem">Settings</div>
+    <a class="sidebar-item">⚙️ Store settings</a>
+    <a class="sidebar-item">🔑 API keys</a>
+  </aside>
+
+  <main>
+    <div class="page-title">Payment Dashboard</div>
+    <div class="page-sub">Powered by Blockonomics · Bitcoin payments</div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total received</div>
+        <div class="stat-value orange">0.0842 BTC</div>
+        <div class="stat-change">↑ +0.012 BTC this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Orders today</div>
+        <div class="stat-value">7</div>
+        <div class="stat-change">↑ +3 from yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending confirmations</div>
+        <div class="stat-value">2</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">BTC price</div>
+        <div class="stat-value">$65,240</div>
+        <div class="stat-change" style="color:var(--muted)">Live rate</div>
+      </div>
+    </div>
+
+    <!-- Recent payments table -->
+    <div class="section-title">Recent Payments</div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr><th>Address</th><th>Book</th><th>Amount</th><th>USD</th><th>Status</th><th>Time</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="val">bc1q…3f9a</td>
+            <td>The Bitcoin Standard</td>
+            <td class="val">0.00037 BTC</td>
+            <td>$24.00</td>
+            <td><span class="badge conf">Confirmed</span></td>
+            <td>2 min ago</td>
+          </tr>
+          <tr>
+            <td class="val">bc1q…7d2c</td>
+            <td>Mastering Bitcoin</td>
+            <td class="val">0.00054 BTC</td>
+            <td>$35.00</td>
+            <td><span class="badge pend">1 conf</span></td>
+            <td>8 min ago</td>
+          </tr>
+          <tr>
+            <td class="val">bc1q…aa11</td>
+            <td>Digital Gold</td>
+            <td class="val">0.00028 BTC</td>
+            <td>$18.00</td>
+            <td><span class="badge memp">Mempool</span></td>
+            <td>12 min ago</td>
+          </tr>
+          <tr>
+            <td class="val">bc1q…55bc</td>
+            <td>Layered Money</td>
+            <td class="val">0.00032 BTC</td>
+            <td>$21.00</td>
+            <td><span class="badge conf">Confirmed</span></td>
+            <td>1 hr ago</td>
+          </tr>
+          <tr>
+            <td class="val">bc1q…f1a2</td>
+            <td>The Bitcoin Standard</td>
+            <td class="val">0.00037 BTC</td>
+            <td>$24.00</td>
+            <td><span class="badge conf">Confirmed</span></td>
+            <td>3 hr ago</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<!-- Blocko Agent widget — ADMIN ONLY, not on public store -->
+<script src="http://localhost:8000/embed.js"
+        data-api="http://localhost:8000"
+        data-position="bottom-right"
+        data-label="Assistant"></script>
+
+</body>
+</html>

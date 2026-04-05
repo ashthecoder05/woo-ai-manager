@@ -1,0 +1,63 @@
+{
+  "platforms": {
+    "woocommerce": {
+      "label": "WooCommerce (WordPress)",
+      "detection_keywords": ["woocommerce", "wordpress", "wp-content", "wc-api", "wp_"],
+      "integration_method": "plugin",
+      "plugin_available": true,
+      "plugin_url": "https://wordpress.org/plugins/blockonomics-bitcoin-and-altcoin-payments/",
+      "webhook_method": "GET",
+      "webhook_path": "/?wc-api=WC_Blockonomics",
+      "supports_custom_ui": true,
+      "requires_ssl": true,
+      "requires_xpub": true,
+      "refund_support": "manual",
+      "guide": "knowledge/platform_guides/woocommerce.md"
+    },
+    "shopify": {
+      "label": "Shopify",
+      "detection_keywords": ["shopify", "myshopify", "shopify_pay", "Shopify.theme"],
+      "integration_method": "hosted_redirect",
+      "plugin_available": false,
+      "webhook_method": "GET",
+      "webhook_path": "/apps/blockonomics/callback",
+      "supports_custom_ui": false,
+      "requires_ssl": true,
+      "requires_xpub": false,
+      "refund_support": "manual",
+      "guide": "knowledge/platform_guides/shopify.md"
+    },
+    "custom_python": {
+      "label": "Custom Python (Flask / FastAPI / Django)",
+      "detection_keywords": ["fastapi", "flask", "django", "uvicorn", "gunicorn", "python", ".py"],
+      "integration_method": "api_direct",
+      "plugin_available": false,
+      "webhook_method": "GET",
+      "webhook_path": "/webhook/blockonomics",
+      "supports_custom_ui": true,
+      "requires_ssl": true,
+      "requires_xpub": true,
+      "refund_support": "custom",
+      "guide": "knowledge/platform_guides/custom_python.md"
+    },
+    "custom_php": {
+      "label": "Custom PHP",
+      "detection_keywords": ["php", ".php", "laravel", "symfony", "codeigniter", "curl_init"],
+      "integration_method": "api_direct",
+      "plugin_available": false,
+      "webhook_method": "GET",
+      "webhook_path": "/webhook/blockonomics",
+      "supports_custom_ui": true,
+      "requires_ssl": true,
+      "requires_xpub": true,
+      "refund_support": "custom",
+      "guide": "knowledge/platform_guides/custom_php.md"
+    }
+  },
+  "default_platform": "custom_python",
+  "webhook_status_codes": {
+    "0": "unconfirmed",
+    "1": "partially_confirmed",
+    "2": "confirmed"
+  }
+}

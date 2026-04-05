@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BitBooks — Pay with Bitcoin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f; --surface: #1a1a1a; --card: #161616;
+      --border: #2a2a2a; --orange: #f7931a; --text: #f0f0f0; --muted: #888;
+    }
+
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 1.2rem; font-weight: 800; }
+    .logo span { color: var(--orange); }
+    .nav-right { display: flex; align-items: center; gap: 1rem; font-size: 0.85rem; color: var(--muted); }
+    .btc-badge {
+      display: flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.75rem; border-radius: 100px;
+      background: rgba(247,147,26,0.1); border: 1px solid rgba(247,147,26,0.3);
+      color: var(--orange); font-size: 0.78rem; font-weight: 600;
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center; padding: 60px 1.5rem 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .hero h1 span { color: var(--orange); }
+    .hero p { color: var(--muted); font-size: 0.95rem; }
+
+    /* BOOKS GRID */
+    .books-section { max-width: 1000px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+    .books-section h2 { font-size: 1rem; font-weight: 600; color: var(--muted); margin-bottom: 1.5rem; letter-spacing: 0.05em; text-transform: uppercase; }
+    .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; }
+
+    .book-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .book-card:hover { border-color: var(--orange); transform: translateY(-2px); }
+
+    .book-cover {
+      height: 160px; display: flex; align-items: center; justify-content: center;
+      font-size: 3.5rem; background: var(--surface);
+    }
+    .book-info { padding: 1rem; }
+    .book-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .book-author { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .book-price {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+    .price-usd { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .price-btc { font-size: 0.7rem; color: var(--orange); font-family: monospace; }
+    .buy-btn {
+      width: 100%; padding: 0.55rem; border: none; border-radius: 8px;
+      background: var(--orange); color: #000; font-weight: 700;
+      font-size: 0.82rem; cursor: pointer; transition: background 0.15s;
+    }
+    .buy-btn:hover { background: #e07d10; }
+
+    /* MODAL */
+    .overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.75); align-items: center; justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2rem; width: 100%; max-width: 420px; margin: 1rem;
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .modal .sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+    .pay-amount {
+      background: var(--surface); border-radius: 12px; padding: 1rem;
+      margin-bottom: 1.25rem; text-align: center;
+    }
+    .pay-amount .btc-val { font-size: 1.6rem; font-weight: 800; color: var(--orange); font-family: monospace; }
+    .pay-amount .usd-val { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+
+    .addr-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .addr-box {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 1.25rem;
+    }
+    .addr-box code { font-size: 0.72rem; color: var(--text); flex: 1; word-break: break-all; font-family: monospace; }
+    .copy-btn {
+      background: var(--border); border: none; border-radius: 6px;
+      padding: 0.3rem 0.6rem; color: var(--muted); font-size: 0.72rem; cursor: pointer;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { background: var(--orange); color: #000; }
+
+    .qr-placeholder {
+      width: 120px; height: 120px; margin: 0 auto 1.25rem;
+      background: white; border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 0.65rem; color: #999;
+    }
+
+    .status-row {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.8rem; color: var(--muted); margin-bottom: 1.25rem;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .close-btn {
+      width: 100%; padding: 0.65rem; border: 1px solid var(--border);
+      border-radius: 10px; background: transparent; color: var(--muted);
+      font-size: 0.85rem; cursor: pointer;
+    }
+    .close-btn:hover { border-color: var(--muted); color: var(--text); }
+
+    /* Blocko Agent widget hint */
+    .agent-hint {
+      position: fixed; bottom: 80px; right: 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 0.6rem 0.9rem;
+      font-size: 0.72rem; color: var(--muted); max-width: 180px; text-align: center;
+      pointer-events: none;
+    }
+    .agent-hint strong { color: var(--orange); display: block; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">₿it<span>Books</span></div>
+  <div class="nav-right">
+    <span>Books for curious minds</span>
+    <div class="btc-badge">₿ Bitcoin accepted</div>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Pay with <span>Bitcoin</span>. Read forever.</h1>
+  <p>No credit cards. No middlemen. Direct to wallet via Blockonomics.</p>
+</div>
+
+<div class="books-section">
+  <h2>Featured Books</h2>
+  <div class="books-grid" id="grid"></div>
+</div>
+
+<!-- Payment Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modal-title">Pay with Bitcoin</h3>
+    <p class="sub" id="modal-sub">Send the exact amount to the address below</p>
+
+    <div class="pay-amount">
+      <div class="btc-val" id="modal-btc">0.00042000 BTC</div>
+      <div class="usd-val" id="modal-usd">≈ $27.00 USD</div>
+    </div>
+
+    <div class="qr-placeholder">QR Code</div>
+
+    <p class="addr-label">Bitcoin address (generated by Blockonomics)</p>
+    <div class="addr-box">
+      <code id="modal-addr">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</code>
+      <button class="copy-btn" onclick="copyAddr()">Copy</button>
+    </div>
+
+    <div class="status-row">
+      <div class="status-dot"></div>
+      Waiting for payment · 2 confirmations required
+    </div>
+
+    <button class="close-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Admin dashboard link (hidden from customers) -->
+<a href="admin.html" style="position:fixed;bottom:12px;left:12px;font-size:0.7rem;color:#333;text-decoration:none;">Admin</a>
+
+<script>
+  const BOOKS = [
+    { emoji: "📈", title: "The Bitcoin Standard", author: "Saifedean Ammous", usd: 24 },
+    { emoji: "🔐", title: "Digital Gold", author: "Nathaniel Popper", usd: 18 },
+    { emoji: "🌐", title: "The Internet of Money", author: "Andreas Antonopoulos", usd: 15 },
+    { emoji: "🏦", title: "Layered Money", author: "Nik Bhatia", usd: 21 },
+    { emoji: "⛓️", title: "Mastering Bitcoin", author: "Andreas Antonopoulos", usd: 35 },
+    { emoji: "🧠", title: "The Sovereign Individual", author: "Davidson & Rees-Mogg", usd: 28 },
+    { emoji: "🪙", title: "Cryptoassets", author: "Burniske & Tatar", usd: 22 },
+    { emoji: "🔑", title: "Bitcoin & Black America", author: "Isaiah Jackson", usd: 16 },
+  ];
+
+  // Fake BTC price for demo
+  const BTC_PRICE = 65000;
+
+  function satsToBtc(usd) {
+    return (usd / BTC_PRICE).toFixed(8);
+  }
+
+  const grid = document.getElementById('grid');
+  BOOKS.forEach(book => {
+    const btc = satsToBtc(book.usd);
+    grid.innerHTML += `
+      <div class="book-card">
+        <div class="book-cover">${book.emoji}</div>
+        <div class="book-info">
+          <div class="book-title">${book.title}</div>
+          <div class="book-author">${book.author}</div>
+          <div class="book-price">
+            <span class="price-usd">$${book.usd}.00</span>
+            <span class="price-btc">${btc} BTC</span>
+          </div>
+          <button class="buy-btn" onclick="openModal('${book.title}', ${book.usd}, '${btc}')">
+            ₿ Buy with Bitcoin
+          </button>
+        </div>
+      </div>`;
+  });
+
+  function openModal(title, usd, btc) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-btc').textContent = btc + ' BTC';
+    document.getElementById('modal-usd').textContent = '≈ $' + usd + '.00 USD';
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('overlay').classList.remove('open');
+  }
+
+  function copyAddr() {
+    const addr = document.getElementById('modal-addr').textContent;
+    navigator.clipboard.writeText(addr);
+    document.querySelector('.copy-btn').textContent = 'Copied!';
+    setTimeout(() => document.querySelector('.copy-btn').textContent = 'Copy', 1500);
+  }
+
+  document.getElementById('overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('overlay')) closeModal();
+  });
+</script>
+</body>
+</html>
