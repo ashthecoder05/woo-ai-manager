@@ -25,6 +25,8 @@
   var POSITION = script.getAttribute('data-position')  || 'bottom-right';
   var LABEL    = script.getAttribute('data-label')     || 'Assistant';
   var MERCHANT = script.getAttribute('data-merchant')  || '';
+  // Session token passed by the dashboard so the widget can make authenticated requests
+  var SESSION_TOKEN = script.getAttribute('data-token') || localStorage.getItem('blocko_session_token') || '';
 
   if (!API_URL) {
     console.warn('[Blockonomics Assistant] data-api attribute is required.');
@@ -114,7 +116,9 @@
   function open() {
     if (!iframeLoaded) {
       iframe.src = API_URL + '/widget?api=' + encodeURIComponent(API_URL) +
-                   (MERCHANT ? '&merchant=' + encodeURIComponent(MERCHANT) : '');
+                   (MERCHANT       ? '&merchant=' + encodeURIComponent(MERCHANT)       : '') +
+                   (SESSION_TOKEN  ? '&token='    + encodeURIComponent(SESSION_TOKEN)  : '') +
+                   '&v=' + Date.now();
       iframeLoaded = true;
     }
     panel.style.display = 'block';

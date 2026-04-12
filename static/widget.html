@@ -140,23 +140,17 @@
 </head>
 <body>
   <header>
-    <div class="logo">₿</div>
+    <div class="logo" id="header-logo">₿</div>
     <div class="header-text">
-      <h1>Blockonomics Assistant</h1>
-      <p>Merchant support · Powered by Claude</p>
+      <h1 id="header-title">Payment Assistant</h1>
+      <p id="header-sub">Merchant support · Powered by Claude</p>
     </div>
     <div class="status-dot" title="Online"></div>
   </header>
 
   <div id="chat"></div>
 
-  <div id="quick-prompts">
-    <button class="qp" data-q="Why is my payment not confirmed?">Payment stuck?</button>
-    <button class="qp" data-q="How do I set up my webhook callback URL?">Webhook setup</button>
-    <button class="qp" data-q="What are the current Bitcoin fee rates?">Fee rates</button>
-    <button class="qp" data-q="Help me write a product description that accepts Bitcoin">Write copy</button>
-    <button class="qp" data-q="Generate a UCP manifest for my store">UCP manifest</button>
-  </div>
+  <div id="quick-prompts"></div>
 
   <form id="form">
     <textarea id="input" placeholder="Ask about payments, setup, fees, marketing…" rows="1"></textarea>
@@ -170,30 +164,140 @@
     const btn    = document.getElementById('btn');
 
     // Read params set by embed.js
-    const params   = new URLSearchParams(window.location.search);
-    const API_URL  = params.get('api')      || '';
-    const MERCHANT = params.get('merchant') || '';
+    const params        = new URLSearchParams(window.location.search);
+    const API_URL       = params.get('api')      || '';
+    const MERCHANT      = params.get('merchant') || '';
+    const SESSION_TOKEN = params.get('token')    || '';
 
-    // Pre-load merchant context so the agent knows gateway/platform without asking
+    // Merchant context is injected fresh on every request server-side
     const history = [];
-    if (MERCHANT) {
-      // Fetch merchant profile and inject as a hidden system context message
-      fetch(`${API_URL}/api/merchant?email=${encodeURIComponent(MERCHANT)}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(m => {
-          if (!m) return;
-          const ctx = [
-            `Merchant context (do not repeat this to the user):`,
-            `Email: ${m.email}`,
-            m.gateway   ? `Payment gateway: ${m.gateway}`              : '',
-            m.platforms?.length ? `Integration: ${m.platforms.join(', ')}` : '',
-            m.assistant ? `Assistant channel: ${m.assistant}`          : '',
-          ].filter(Boolean).join('\n');
-          history.unshift({ role: 'user',      content: ctx });
-          history.unshift({ role: 'assistant', content: 'Understood. I will tailor my answers to this merchant.' });
-          // Remove the priming exchange after first real message
-        })
-        .catch(() => {});
+
+    // ── Gateway config ────────────────────────────────────────────────────────
+    const GATEWAY_CONFIG = {
+      blockonomics: {
+        logo: '₿',
+        name: 'Blockonomics Assistant',
+        sub: 'Bitcoin payments · Powered by Claude',
+        placeholder: 'Ask about payments, setup, fees, Bitcoin marketing…',
+        welcome: "Hi! I'm your Blockonomics merchant assistant.\n\nAsk me about payment issues, store setup, fee rates, or Bitcoin marketing. Use the quick buttons above to get started.",
+        prompts: [
+          { label: 'Payment stuck?',  q: 'Why is my payment not confirmed?' },
+          { label: 'Webhook setup',   q: 'How do I set up my webhook callback URL?' },
+          { label: 'Fee rates',       q: 'What are the current Bitcoin fee rates?' },
+          { label: 'Write copy',      q: 'Help me write a product description that accepts Bitcoin' },
+          { label: 'UCP manifest',    q: 'Generate a UCP manifest for my store' },
+        ],
+      },
+      stripe: {
+        logo: '💳',
+        name: 'Stripe Assistant',
+        sub: 'Stripe payments · Powered by Claude',
+        placeholder: 'Ask about Stripe payments, setup, fees, marketing…',
+        welcome: "Hi! I'm your Stripe merchant assistant.\n\nAsk me about payment issues, Stripe setup, fees, or store marketing. Use the quick buttons above to get started.",
+        prompts: [
+          { label: 'Payment failed?',   q: 'Why did my Stripe payment fail?' },
+          { label: 'Webhook setup',     q: 'How do I set up my Stripe webhook?' },
+          { label: 'Stripe fees',       q: 'What are Stripe processing fees?' },
+          { label: 'Write copy',        q: 'Help me write a product description for my Stripe store' },
+          { label: 'Refund process',    q: 'How do I process a refund in Stripe?' },
+        ],
+      },
+      coinbase: {
+        logo: '🔵',
+        name: 'Coinbase Commerce Assistant',
+        sub: 'Crypto payments · Powered by Claude',
+        placeholder: 'Ask about Coinbase Commerce, setup, crypto fees…',
+        welcome: "Hi! I'm your Coinbase Commerce merchant assistant.\n\nAsk me about payment issues, store setup, crypto fees, or marketing. Use the quick buttons above to get started.",
+        prompts: [
+          { label: 'Payment stuck?',   q: 'Why is my Coinbase Commerce payment not confirmed?' },
+          { label: 'Webhook setup',    q: 'How do I set up my Coinbase Commerce webhook?' },
+          { label: 'Crypto fees',      q: 'What are the current crypto fee rates?' },
+          { label: 'Write copy',       q: 'Help me write a product description that accepts crypto' },
+          { label: 'Supported coins',  q: 'Which cryptocurrencies does Coinbase Commerce support?' },
+        ],
+      },
+      bitpay: {
+        logo: '₿',
+        name: 'BitPay Assistant',
+        sub: 'Bitcoin payments · Powered by Claude',
+        placeholder: 'Ask about BitPay payments, setup, fees…',
+        welcome: "Hi! I'm your BitPay merchant assistant.\n\nAsk me about payment issues, BitPay setup, fees, or marketing. Use the quick buttons above to get started.",
+        prompts: [
+          { label: 'Payment stuck?',   q: 'Why is my BitPay payment not confirmed?' },
+          { label: 'Webhook setup',    q: 'How do I set up my BitPay webhook?' },
+          { label: 'Fee rates',        q: 'What are current Bitcoin fee rates?' },
+          { label: 'Write copy',       q: 'Help me write a product description that accepts Bitcoin' },
+          { label: 'Lightning setup',  q: 'How do I enable Lightning Network on BitPay?' },
+        ],
+      },
+      nowpayments: {
+        logo: '🪙',
+        name: 'NOWPayments Assistant',
+        sub: 'Crypto payments · Powered by Claude',
+        placeholder: 'Ask about NOWPayments, setup, crypto fees…',
+        welcome: "Hi! I'm your NOWPayments merchant assistant.\n\nAsk me about payment issues, store setup, crypto fees, or marketing. Use the quick buttons above to get started.",
+        prompts: [
+          { label: 'Payment stuck?',    q: 'Why is my NOWPayments payment not confirmed?' },
+          { label: 'Webhook setup',     q: 'How do I set up my NOWPayments webhook?' },
+          { label: 'Supported coins',   q: 'Which coins does NOWPayments support?' },
+          { label: 'Write copy',        q: 'Help me write a product description that accepts crypto' },
+          { label: 'Auto-conversion',   q: 'How does auto-conversion to stablecoins work?' },
+        ],
+      },
+      coingate: {
+        logo: '🔷',
+        name: 'CoinGate Assistant',
+        sub: 'Crypto payments · Powered by Claude',
+        placeholder: 'Ask about CoinGate, setup, fees…',
+        welcome: "Hi! I'm your CoinGate merchant assistant.\n\nAsk me about payment issues, store setup, fees, or marketing. Use the quick buttons above to get started.",
+        prompts: [
+          { label: 'Payment stuck?',  q: 'Why is my CoinGate payment not confirmed?' },
+          { label: 'Webhook setup',   q: 'How do I set up my CoinGate webhook?' },
+          { label: 'SEPA settlement', q: 'How does SEPA settlement work on CoinGate?' },
+          { label: 'Write copy',      q: 'Help me write a product description that accepts crypto' },
+          { label: 'Supported coins', q: 'Which coins does CoinGate support?' },
+        ],
+      },
+    };
+
+    function applyGatewayConfig(gateway) {
+      const cfg = GATEWAY_CONFIG[gateway] || GATEWAY_CONFIG['blockonomics'];
+
+      document.getElementById('header-logo').textContent  = cfg.logo;
+      document.getElementById('header-title').textContent = cfg.name;
+      document.getElementById('header-sub').textContent   = cfg.sub;
+      document.getElementById('input').placeholder        = cfg.placeholder;
+
+      const qpEl = document.getElementById('quick-prompts');
+      qpEl.innerHTML = '';
+      cfg.prompts.forEach(p => {
+        const b = document.createElement('button');
+        b.className   = 'qp';
+        b.dataset.q   = p.q;
+        b.textContent = p.label;
+        b.addEventListener('click', () => sendMessage(p.q));
+        qpEl.appendChild(b);
+      });
+
+      addMsg(cfg.welcome, 'bot');
+    }
+
+    // Load gateway config + news in a single call, apply everything at once
+    async function initWidget() {
+      let gateway = 'blockonomics';
+      let newsData = null;
+      if (API_URL) {
+        try {
+          const qs = MERCHANT ? `?merchant=${encodeURIComponent(MERCHANT)}` : '';
+          const res = await fetch(`${API_URL}/api/news${qs}`);
+          if (res.ok) {
+            newsData = await res.json();
+            if (newsData.gateway) gateway = newsData.gateway.toLowerCase();
+          }
+        } catch { /* use default */ }
+      }
+      applyGatewayConfig(gateway);
+      if (newsData && newsData.title) showNewsCard(newsData);
     }
 
     function addMsg(text, role, thinking = false) {
@@ -220,7 +324,11 @@
         const res = await fetch(`${API_URL}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({
+            messages: history,
+            merchant: MERCHANT || undefined,
+            session_token: SESSION_TOKEN || undefined,
+          }),
         });
         const data = await res.json();
         thinking.remove();
@@ -257,71 +365,72 @@
     }
     input.addEventListener('input', autoResize);
 
-    // Quick prompt buttons
-    document.querySelectorAll('.qp').forEach(btn => {
-      btn.addEventListener('click', () => sendMessage(btn.dataset.q));
-    });
+    const GATEWAY_DISPLAY_NAMES = {
+      blockonomics: 'Blockonomics', stripe: 'Stripe', coinbase: 'Coinbase Commerce',
+      bitpay: 'BitPay', nowpayments: 'NOWPayments', coingate: 'CoinGate',
+    };
 
-    // Welcome message
-    addMsg(
-      "Hi! I'm your Blockchain merchant assistant.\n\n" +
-      "Ask me about payment issues, store setup, fee rates, or Bitcoin marketing. " +
-      "Use the quick buttons above to get started.",
-      'bot'
-    );
-
-    // Auto-fetch latest news and show as a proactive update card
-    async function loadLatestNews() {
-      if (!API_URL) return;
+    function isSafeUrl(urlString) {
       try {
-        const res = await fetch(`${API_URL}/api/news`);
-        const data = await res.json();
-        if (!data.title) return;
-
-        const card = document.createElement('div');
-        card.style.cssText = `
-          margin: 0.25rem 0;
-          padding: 0.7rem 0.85rem;
-          background: rgba(247,147,26,0.08);
-          border: 1px solid rgba(247,147,26,0.25);
-          border-radius: 10px;
-          font-size: 0.78rem;
-          line-height: 1.5;
-          align-self: flex-start;
-          max-width: 92%;
-        `;
-
-        const label = document.createElement('div');
-        label.style.cssText = 'font-size:0.65rem;font-weight:700;color:#f7931a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;';
-        label.textContent = 'New update from Blockonomics';
-
-        const title = document.createElement('div');
-        title.style.cssText = 'font-weight:600;color:#f0f0f0;margin-bottom:0.2rem;';
-        title.textContent = data.title + (data.date ? ` · ${data.date}` : '');
-
-        const body = document.createElement('div');
-        body.style.color = '#aaa';
-        body.textContent = data.body || '';
-
-        card.appendChild(label);
-        card.appendChild(title);
-        if (data.body) card.appendChild(body);
-
-        if (data.url) {
-          const link = document.createElement('a');
-          link.href = data.url;
-          link.target = '_blank';
-          link.style.cssText = 'color:#f7931a;font-size:0.72rem;text-decoration:none;display:block;margin-top:0.35rem;';
-          link.textContent = 'Read full update →';
-          card.appendChild(link);
-        }
-
-        chatEl.appendChild(card);
-        chatEl.scrollTop = chatEl.scrollHeight;
-      } catch { /* silently ignore */ }
+        const url = new URL(urlString);
+        return ['http:', 'https:'].includes(url.protocol);
+      } catch { return false; }
     }
 
-    loadLatestNews();
+    function showNewsCard(data) {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        margin: 0.25rem 0; padding: 0.7rem 0.85rem;
+        background: rgba(247,147,26,0.08); border: 1px solid rgba(247,147,26,0.25);
+        border-radius: 10px; font-size: 0.78rem; line-height: 1.5;
+        align-self: flex-start; max-width: 92%;
+      `;
+
+      const gatewayName = GATEWAY_DISPLAY_NAMES[data.gateway] || data.gateway || 'Payment Gateway';
+
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:0.65rem;font-weight:700;color:#f7931a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem;';
+      label.textContent = `New update from ${gatewayName}`;
+
+      // Strip markdown ** and trailing punctuation from title
+      const cleanTitle = (data.title || '').replace(/\*+/g, '').replace(/[:\s]+$/, '');
+      const title = document.createElement('div');
+      title.style.cssText = 'font-weight:600;color:#f0f0f0;margin-bottom:0.2rem;';
+      title.textContent = cleanTitle;
+
+      card.appendChild(label);
+      card.appendChild(title);
+
+      if (data.body) {
+        const body = document.createElement('div');
+        body.style.color = '#aaa';
+        body.textContent = data.body;
+        card.appendChild(body);
+      }
+
+      const linksRow = document.createElement('div');
+      linksRow.style.cssText = 'margin-top:0.4rem;display:flex;gap:0.75rem;flex-wrap:wrap;';
+      if (data.url && isSafeUrl(data.url)) {
+        const link = document.createElement('a');
+        link.href = data.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+        link.style.cssText = 'color:#f7931a;font-size:0.72rem;text-decoration:none;';
+        link.textContent = 'Read full update →';
+        linksRow.appendChild(link);
+      }
+      if (data.community_url && isSafeUrl(data.community_url)) {
+        const clink = document.createElement('a');
+        clink.href = data.community_url; clink.target = '_blank'; clink.rel = 'noopener noreferrer';
+        clink.style.cssText = 'color:#888;font-size:0.72rem;text-decoration:none;';
+        clink.textContent = 'Join community →';
+        linksRow.appendChild(clink);
+      }
+      if (linksRow.children.length) card.appendChild(linksRow);
+
+      chatEl.appendChild(card);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    initWidget();
 </script>
 </body>
 </html>

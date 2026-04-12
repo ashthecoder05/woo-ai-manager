@@ -232,6 +232,18 @@
 
 <div class="page">
 
+  <!-- Email verification banner (hidden by default) -->
+  <div id="verify-banner" style="display:none;background:rgba(247,147,26,0.08);border:1px solid rgba(247,147,26,0.3);border-radius:12px;padding:0.9rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <div>
+      <span style="font-size:0.85rem;font-weight:600;color:var(--orange);">Verify your email</span>
+      <span style="font-size:0.82rem;color:var(--muted);margin-left:0.5rem;">Sign in with Google to unlock analytics and order data.</span>
+    </div>
+    <div id="google-signin-btn" style="cursor:pointer;background:#fff;border:1px solid #ddd;border-radius:8px;padding:0.4rem 1rem;font-size:0.8rem;font-weight:600;color:#333;display:flex;align-items:center;gap:0.5rem;">
+      <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in with Google
+    </div>
+  </div>
+
   <!-- Welcome -->
   <div class="welcome">
     <h1>Welcome back, <span id="merchant-name">Merchant</span> 👋</h1>
@@ -241,6 +253,7 @@
   <!-- Page Tabs -->
   <div class="page-tabs">
     <button class="page-tab active" onclick="switchTab('overview', this)">Overview</button>
+    <button class="page-tab" onclick="switchTab('analytics', this)">Analytics</button>
     <button class="page-tab" onclick="switchTab('configure', this)">Configure</button>
   </div>
 
@@ -250,16 +263,16 @@
     <!-- Stats row -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-label">Gateways</div>
-        <div id="stat-gateway" class="stat-value" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.1rem;">—</div>
+        <div class="stat-label">Conversations Handled</div>
+        <div id="stat-conversations" class="stat-value orange">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Platforms</div>
-        <div id="stat-platforms" class="stat-value" style="display:flex;flex-wrap:wrap;gap:0.35rem;margin-top:0.1rem;">—</div>
+        <div class="stat-label">Payments Received</div>
+        <div id="stat-payments" class="stat-value green">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Assistant</div>
-        <div class="stat-value green" id="stat-assistant">—</div>
+        <div class="stat-label">Total BTC Confirmed</div>
+        <div id="stat-btc" class="stat-value orange">—</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Status</div>
@@ -267,6 +280,22 @@
           <span class="live-dot"></span>
           <span style="color:var(--green);font-size:0.9rem;">Active</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Gateway & platform pills -->
+    <div style="display:flex;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Gateways:</span>
+        <div id="stat-gateway" style="display:flex;flex-wrap:wrap;gap:0.35rem;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Platforms:</span>
+        <div id="stat-platforms" style="display:flex;flex-wrap:wrap;gap:0.35rem;"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;">Channel:</span>
+        <span class="stat-pill green-pill" id="stat-assistant">—</span>
       </div>
     </div>
 
@@ -289,7 +318,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="setup-embed">
         <div class="card-title"><span class="dot"></span> Embed Setup</div>
         <div class="snippet-box">
           <code class="snippet-code" id="snippet-code"></code>
@@ -325,6 +354,38 @@
         </div>
       </div>
 
+      <div class="card" id="setup-telegram" style="display:none;">
+        <div class="card-title"><span class="dot"></span> Telegram Setup</div>
+        <div class="instr">
+          <strong>Connect your Blocko Agent to Telegram</strong><br/><br/>
+          1. Open Telegram and search for <code>@BotFather</code><br/>
+          2. Send <code>/newbot</code> and follow the prompts to create your bot<br/>
+          3. Copy the <strong>API token</strong> BotFather gives you<br/>
+          4. Paste your bot token below and click <strong>Save &amp; Connect</strong>:<br/><br/>
+          <div style="margin-bottom:0.75rem;">
+            <label style="font-size:0.75rem;color:#888;display:block;margin-bottom:0.4rem;">Enter bot token</label>
+            <input id="tg-token" type="text" placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+              style="width:100%;background:#0f0f0f;border:1px solid #2a2a2a;border-radius:8px;padding:0.55rem 0.75rem;color:#f0f0f0;font-size:0.78rem;font-family:monospace;outline:none;box-sizing:border-box;"
+              onfocus="this.style.borderColor='#f7931a'" onblur="this.style.borderColor='#2a2a2a'"/>
+          </div>
+          <button onclick="connectTelegram()" style="width:100%;padding:0.65rem;border:none;border-radius:10px;background:#f7931a;color:#000;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:0.5rem;">
+            Save &amp; Connect
+          </button>
+          <div id="tg-status" style="font-size:0.75rem;text-align:center;min-height:1.2rem;color:#22c55e;display:none;">
+            Bot token saved. Your Telegram bot is connected.
+          </div>
+          <br/>
+          5. Your Telegram bot will be live and ready to assist customers<br/><br/>
+          <strong>Tip:</strong> You can customize the bot's name and avatar in BotFather with <code>/setname</code> and <code>/setuserpic</code>.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Recent Payments Feed -->
+    <div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-title"><span class="dot"></span> Recent Payments</div>
+      <div id="payment-feed" style="font-size:0.82rem;color:var(--muted);">Loading...</div>
     </div>
 
     <!-- Agent Capabilities -->
@@ -359,6 +420,86 @@
     </div>
 
   </div><!-- /panel-overview -->
+
+  <!-- ── ANALYTICS PANEL ────────────────────────────────────────── -->
+  <div id="panel-analytics" class="page-panel">
+
+    <!-- Period filter -->
+    <div style="display:flex;gap:0.35rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+      <button class="plat-tab active" onclick="switchPeriod('all', this)">All Time</button>
+      <button class="plat-tab" onclick="switchPeriod('30d', this)">30 Days</button>
+      <button class="plat-tab" onclick="switchPeriod('7d', this)">7 Days</button>
+      <button class="plat-tab" onclick="switchPeriod('today', this)">Today</button>
+    </div>
+
+    <!-- Analytics stat cards -->
+    <div class="stats-row" style="grid-template-columns:repeat(4, 1fr);">
+      <div class="stat-card">
+        <div class="stat-label">Revenue</div>
+        <div id="a-revenue" class="stat-value green">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gross Profit</div>
+        <div id="a-profit" class="stat-value green">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Profit Margin</div>
+        <div id="a-margin" class="stat-value orange">0%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div id="a-orders" class="stat-value orange">0</div>
+      </div>
+    </div>
+
+    <!-- Secondary stats -->
+    <div class="stats-row" style="grid-template-columns:repeat(4, 1fr);">
+      <div class="stat-card">
+        <div class="stat-label">Confirmed</div>
+        <div id="a-confirmed" class="stat-value green">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pending</div>
+        <div id="a-pending" class="stat-value" style="color:#f7931a;">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Order</div>
+        <div id="a-avg" class="stat-value">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">BTC Received</div>
+        <div id="a-btc" class="stat-value orange">0.00000000</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="grid-2">
+      <!-- Daily Revenue Chart -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span> Daily Revenue (30 days)</div>
+        <div id="a-chart" style="height:220px;display:flex;align-items:flex-end;gap:3px;padding-top:0.5rem;overflow-x:auto;">
+          <div style="text-align:center;padding:2rem 0;color:var(--muted2);width:100%;font-size:0.82rem;">No data yet</div>
+        </div>
+      </div>
+
+      <!-- Top Products -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span> Top Products</div>
+        <div id="a-products">
+          <div style="text-align:center;padding:2rem 0;color:var(--muted2);font-size:0.82rem;">No product data yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="card" style="margin-top:1.25rem;">
+      <div class="card-title"><span class="dot"></span> Recent Orders</div>
+      <div id="a-orders-list" style="font-size:0.82rem;color:var(--muted);">
+        <div style="text-align:center;padding:1.5rem 0;color:var(--muted2);">No orders yet</div>
+      </div>
+    </div>
+
+  </div><!-- /panel-analytics -->
 
   <!-- ── CONFIGURE PANEL ────────────────────────────────────────── -->
   <div id="panel-configure" class="page-panel">
@@ -412,6 +553,7 @@
   const PLAT_LABELS = { plugin: '🔌 Plugin', api: '⚡ API', custom: '🛠 Custom' };
 
   let merchant = null;
+  let sessionToken = localStorage.getItem('blocko_session_token') || '';
 
   async function loadDashboard() {
     const stored = localStorage.getItem('blocko_merchant');
@@ -419,13 +561,60 @@
 
     merchant = JSON.parse(stored);
 
-    // Try to refresh from server
+    // Try to refresh from server — include session token for auth
     try {
-      const res = await fetch('/api/merchant?email=' + encodeURIComponent(merchant.email));
+      const qs = new URLSearchParams({ email: merchant.email, token: sessionToken });
+      const res = await fetch('/api/merchant?' + qs.toString());
       if (res.ok) { merchant = await res.json(); localStorage.setItem('blocko_merchant', JSON.stringify(merchant)); }
+      else if (res.status === 401) { logout(); return; }
     } catch(_) {}
 
     renderDashboard();
+    loadStats();
+    loadPaymentFeed();
+  }
+
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/stats');
+      if (!res.ok) return;
+      const data = await res.json();
+      document.getElementById('stat-conversations').textContent = data.chats.total_conversations || '0';
+      document.getElementById('stat-payments').textContent = data.payments.confirmed_payments || '0';
+      const btc = data.payments.total_btc_received || 0;
+      document.getElementById('stat-btc').textContent = btc > 0 ? btc.toFixed(8) + ' BTC' : '0 BTC';
+    } catch(_) {}
+  }
+
+  async function loadPaymentFeed() {
+    const feed = document.getElementById('payment-feed');
+    try {
+      const res = await fetch('/api/payments/recent?limit=10');
+      if (!res.ok) { feed.textContent = 'Could not load payments.'; return; }
+      const data = await res.json();
+      if (!data.events || data.events.length === 0) {
+        feed.innerHTML = '<div style="text-align:center;padding:1.5rem 0;color:var(--muted2);">No payments yet. Payments will appear here once your webhook receives its first transaction.</div>';
+        return;
+      }
+      const statusColors = { confirmed: '#22c55e', partially_confirmed: '#f7931a', unconfirmed: '#888' };
+      feed.innerHTML = data.events.map(e => {
+        const color = statusColors[e.status_label] || '#888';
+        const time = e.created_at ? e.created_at.slice(0, 16).replace('T', ' ') : '';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0;border-bottom:1px solid var(--muted2);">
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+            <span style="color:var(--text);font-family:monospace;font-size:0.78rem;">${e.value_btc.toFixed(8)} BTC</span>
+            <span style="color:var(--muted);font-size:0.72rem;">${e.addr.slice(0,8)}...${e.addr.slice(-4)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span style="font-size:0.68rem;color:${color};font-weight:600;text-transform:uppercase;">${e.status_label}</span>
+            <span style="font-size:0.68rem;color:var(--muted2);">${time}</span>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(_) {
+      feed.textContent = 'Could not load payments.';
+    }
   }
 
   function renderDashboard() {
@@ -441,6 +630,10 @@
       else { merchant.created_at = new Date().toISOString(); localStorage.setItem('blocko_joined', merchant.created_at); }
     }
     const since = new Date(merchant.created_at).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+
+    // Verification banner
+    const verified = merchant.is_verified === 1 || merchant.is_verified === true;
+    document.getElementById('verify-banner').style.display = verified ? 'none' : 'flex';
 
     // Nav
     document.getElementById('nav-email').textContent = merchant.email;
@@ -480,10 +673,15 @@
     document.getElementById('p-name').textContent  = name;
     document.getElementById('p-since').textContent = since;
 
+    // Toggle Embed vs Telegram setup based on assistant channel
+    const isTelegram = merchant.assistant === 'telegram';
+    document.getElementById('setup-embed').style.display = isTelegram ? 'none' : 'block';
+    document.getElementById('setup-telegram').style.display = isTelegram ? 'block' : 'none';
+
     // Snippet
     const origin = window.location.origin;
     document.getElementById('snippet-code').textContent =
-      `<script src="${origin}/embed.js" data-api="${origin}" data-merchant="${merchant.email}" data-position="bottom-right" data-label="Assistant"><\/script>`;
+      `<script src="${origin}/embed.js" data-api="${origin}" data-merchant="${merchant.email}" data-token="${sessionToken}" data-position="bottom-right" data-label="Assistant"><\/script>`;
 
     // Platform instruction tabs
     buildPlatTabs(plats);
@@ -531,6 +729,45 @@
     });
   }
 
+  async function connectTelegram() {
+    const token = document.getElementById('tg-token').value.trim();
+    const statusEl = document.getElementById('tg-status');
+    const inputEl = document.getElementById('tg-token');
+
+    if (!token) {
+      inputEl.style.borderColor = '#ef4444';
+      return;
+    }
+
+    statusEl.style.display = 'block';
+    statusEl.style.color = '#888';
+    statusEl.textContent = 'Connecting…';
+
+    try {
+      const res = await fetch('/api/telegram/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, email: merchant.email }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem('blocko_tg_token', token);
+        inputEl.style.borderColor = '#22c55e';
+        statusEl.style.color = '#22c55e';
+        statusEl.textContent = data.message || 'Telegram bot is now running!';
+      } else {
+        inputEl.style.borderColor = '#ef4444';
+        statusEl.style.color = '#ef4444';
+        statusEl.textContent = data.detail || 'Failed to start bot. Check your token.';
+      }
+    } catch (err) {
+      inputEl.style.borderColor = '#ef4444';
+      statusEl.style.color = '#ef4444';
+      statusEl.textContent = 'Network error. Is the server running?';
+    }
+  }
+
   function openChat() {
     const btn = document.querySelector('[data-widget-trigger]') || document.getElementById('blocko-trigger');
     if (btn) btn.click();
@@ -542,6 +779,7 @@
 
   function logout() {
     localStorage.removeItem('blocko_merchant');
+    localStorage.removeItem('blocko_session_token');
     localStorage.removeItem('blocko_joined');
     localStorage.removeItem('blocko_copied');
     window.location.href = '/';
@@ -554,6 +792,122 @@
     document.getElementById('panel-' + id).classList.add('active');
     btn.classList.add('active');
     if (id === 'configure') populateConfigForm();
+    if (id === 'analytics') loadAnalytics();
+  }
+
+  // ── Analytics ───────────────────────────────────────────────────────────
+  let _analyticsPeriod = 'all';
+
+  function switchPeriod(period, btn) {
+    _analyticsPeriod = period;
+    document.querySelectorAll('#panel-analytics .plat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadAnalytics();
+  }
+
+  async function loadAnalytics() {
+    try {
+      const qs = new URLSearchParams({ period: _analyticsPeriod });
+      if (merchant && merchant.email) qs.set('merchant', merchant.email);
+      const res = await fetch('/api/analytics?' + qs.toString());
+      if (!res.ok) return;
+      const d = await res.json();
+
+      // Stat cards
+      document.getElementById('a-revenue').textContent = '$' + d.revenue_usd.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('a-profit').textContent = '$' + d.gross_profit_usd.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('a-margin').textContent = d.profit_margin_pct + '%';
+      document.getElementById('a-orders').textContent = d.total_orders;
+      document.getElementById('a-confirmed').textContent = d.confirmed_orders;
+      document.getElementById('a-pending').textContent = d.pending_orders;
+      document.getElementById('a-avg').textContent = '$' + d.avg_order_usd.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('a-btc').textContent = d.total_btc_received.toFixed(8);
+
+      // Daily revenue chart
+      renderRevenueChart(d.daily_revenue || []);
+
+      // Top products
+      renderTopProducts(d.top_products || []);
+
+      // Recent orders
+      loadRecentOrders();
+    } catch(e) {
+      console.error('Analytics load error:', e);
+    }
+  }
+
+  function renderRevenueChart(daily) {
+    const el = document.getElementById('a-chart');
+    if (!daily.length) {
+      el.innerHTML = '<div style="text-align:center;padding:2rem 0;color:var(--muted2);width:100%;font-size:0.82rem;">No revenue data yet</div>';
+      return;
+    }
+    const maxRev = Math.max(...daily.map(d => d.revenue_usd), 1);
+    el.innerHTML = daily.map(d => {
+      const h = Math.max((d.revenue_usd / maxRev) * 180, 4);
+      const label = d.date.slice(5); // MM-DD
+      return `<div style="flex:1;min-width:14px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;" title="$${d.revenue_usd.toFixed(2)} | ${d.orders} orders | ${d.date}">
+        <div style="font-size:0.58rem;color:var(--muted2);writing-mode:vertical-rl;transform:rotate(180deg);max-height:2.5rem;overflow:hidden;">$${d.revenue_usd >= 1000 ? (d.revenue_usd/1000).toFixed(1)+'k' : d.revenue_usd.toFixed(0)}</div>
+        <div style="width:100%;max-width:28px;height:${h}px;background:linear-gradient(to top, #f7931a, #ffb347);border-radius:4px 4px 0 0;transition:height 0.3s;"></div>
+        <div style="font-size:0.55rem;color:var(--muted2);white-space:nowrap;">${label}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderTopProducts(products) {
+    const el = document.getElementById('a-products');
+    if (!products.length) {
+      el.innerHTML = '<div style="text-align:center;padding:2rem 0;color:var(--muted2);font-size:0.82rem;">No product data yet</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.5rem;font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;padding-bottom:0.5rem;border-bottom:1px solid var(--muted2);">
+        <span>Product</span><span style="text-align:right;">Sold</span><span style="text-align:right;">Revenue</span><span style="text-align:right;">Profit</span>
+      </div>
+      ${products.map(p => `
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid #1a1a1a;font-size:0.82rem;">
+          <span style="color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.product}</span>
+          <span style="text-align:right;color:var(--muted);">${p.units_sold}</span>
+          <span style="text-align:right;color:var(--green);">$${p.revenue_usd.toFixed(2)}</span>
+          <span style="text-align:right;color:${p.profit_usd >= 0 ? 'var(--green)' : '#f55'};">$${p.profit_usd.toFixed(2)}</span>
+        </div>
+      `).join('')}
+    `;
+  }
+
+  async function loadRecentOrders() {
+    const el = document.getElementById('a-orders-list');
+    try {
+      const qs = new URLSearchParams({ limit: '20' });
+      if (merchant && merchant.email) qs.set('merchant', merchant.email);
+      const res = await fetch('/api/orders?' + qs.toString());
+      if (!res.ok) { el.innerHTML = '<div style="text-align:center;padding:1rem 0;color:var(--muted2);">Could not load orders.</div>'; return; }
+      const data = await res.json();
+      if (!data.orders || data.orders.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:1.5rem 0;color:var(--muted2);">No orders yet</div>';
+        return;
+      }
+      const statusColors = { confirmed: '#22c55e', pending: '#f7931a', cancelled: '#f55' };
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1.2fr 1.5fr 1fr 1fr 0.8fr 1fr;gap:0.5rem;font-size:0.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;padding-bottom:0.5rem;border-bottom:1px solid var(--muted2);">
+          <span>Order ID</span><span>Product</span><span style="text-align:right;">Price</span><span style="text-align:right;">BTC</span><span style="text-align:center;">Status</span><span style="text-align:right;">Date</span>
+        </div>
+        ${data.orders.map(o => {
+          const color = statusColors[o.status] || '#888';
+          const time = o.created_at ? o.created_at.slice(0, 10) : '';
+          return `<div style="display:grid;grid-template-columns:1.2fr 1.5fr 1fr 1fr 0.8fr 1fr;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid #1a1a1a;font-size:0.78rem;align-items:center;">
+            <span style="font-family:monospace;color:var(--muted);font-size:0.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.order_id}</span>
+            <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.product_name || '—'}</span>
+            <span style="text-align:right;color:var(--text);">$${o.sale_price_usd.toFixed(2)}</span>
+            <span style="text-align:right;font-family:monospace;font-size:0.72rem;color:var(--orange);">${o.btc_amount.toFixed(6)}</span>
+            <span style="text-align:center;font-size:0.68rem;font-weight:600;color:${color};text-transform:uppercase;">${o.status}</span>
+            <span style="text-align:right;font-size:0.72rem;color:var(--muted2);">${time}</span>
+          </div>`;
+        }).join('')}
+      `;
+    } catch(e) {
+      el.innerHTML = '<div style="text-align:center;padding:1rem 0;color:var(--muted2);">Could not load orders.</div>';
+    }
   }
 
   // ── Configure form helpers ───────────────────────────────────────────────
@@ -600,14 +954,26 @@
     msg.className = 'save-msg';
 
     try {
+      // Fetch a CSRF token before the state-changing request
+      const csrfRes = await fetch('/api/csrf-token?email=' + encodeURIComponent(merchant.email));
+      const csrfData = csrfRes.ok ? await csrfRes.json() : {};
+      const csrfToken = csrfData.csrf_token || '';
+
       const res = await fetch('/api/signin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ email: merchant.email, name: merchant.name, gateways, platforms, assistant }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       merchant = data.merchant;
+      if (data.session_token) {
+        sessionToken = data.session_token;
+        localStorage.setItem('blocko_session_token', sessionToken);
+      }
       localStorage.setItem('blocko_merchant', JSON.stringify(merchant));
       renderDashboard();
       msg.textContent = '✓ Changes saved successfully.';

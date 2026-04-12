@@ -36,6 +36,16 @@ GITHUB_REPOS = {
 # Stripe — official changelog RSS (JSON endpoint via public API)
 STRIPE_CHANGELOG_URL = "https://stripe.com/docs/changelog"
 
+# Community pages per gateway
+COMMUNITY_URLS = {
+    "blockonomics": "https://community.blockonomics.co",
+    "coinbase":     "https://www.coinbase.com/en-gb/learn/community",
+    "bitpay":       "https://bitpay.com/",
+    "stripe":       "https://groups.google.com/a/lists.stripe.com/g/api-discuss",
+    "nowpayments":  None,
+    "coingate":     None,
+}
+
 # Fallback static notes shown when live fetch fails
 FALLBACKS = {
     "blockonomics": (
@@ -168,38 +178,53 @@ def _fetch_blockonomics_topic_body(slug: str, tid: int) -> str:
 # Public fetch functions — one per gateway
 # ---------------------------------------------------------------------------
 
+def _community_line(gateway: str) -> str:
+    url = COMMUNITY_URLS.get(gateway)
+    return f"Community: {url}" if url else ""
+
+
 def fetch_blockonomics_updates() -> str:
     fetched_at = _now()
     content = _fetch_blockonomics_forum()
-    return f"**Blockonomics** — latest updates (fetched {fetched_at}):\n\n{content}"
+    community = _community_line("blockonomics")
+    return (
+        f"**Blockonomics** — latest updates (fetched {fetched_at}):\n\n{content}\n"
+        + (f"\n{community}" if community else "")
+    )
 
 
 def fetch_coinbase_updates() -> str:
     fetched_at = _now()
     content = _fetch_github_releases("coinbase")
+    community = _community_line("coinbase")
     return (
         f"**Coinbase Commerce** — latest plugin releases (fetched {fetched_at}):\n\n{content}\n"
-        f"Full changelog: https://github.com/coinbase/coinbase-commerce-woocommerce/releases"
+        f"Full changelog: https://github.com/coinbase/coinbase-commerce-woocommerce/releases\n"
+        + (f"{community}" if community else "")
     )
 
 
 def fetch_bitpay_updates() -> str:
     fetched_at = _now()
     content = _fetch_github_releases("bitpay")
+    community = _community_line("bitpay")
     return (
         f"**BitPay** — latest plugin releases (fetched {fetched_at}):\n\n{content}\n"
-        f"Full changelog: https://github.com/bitpay/bitpay-checkout-for-woocommerce/releases"
+        f"Full changelog: https://github.com/bitpay/bitpay-checkout-for-woocommerce/releases\n"
+        + (f"{community}" if community else "")
     )
 
 
 def fetch_stripe_updates() -> str:
     """Stripe doesn't have a public JSON changelog API — return curated link + fallback."""
     fetched_at = _now()
+    community = _community_line("stripe")
     return (
         f"**Stripe** — latest updates (fetched {fetched_at}):\n\n"
         f"{FALLBACKS['stripe']}\n\n"
         f"Live changelog: https://stripe.com/docs/changelog\n"
-        f"Stripe Bridge updates: https://stripe.com/docs/crypto"
+        f"Stripe Bridge updates: https://stripe.com/docs/crypto\n"
+        + (f"{community}" if community else "")
     )
 
 

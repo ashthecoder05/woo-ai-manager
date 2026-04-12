@@ -1,4 +1,5 @@
 from services import blockonomics, blockchain, ucp, marketing
+from services.db import get_recent_payments as db_get_recent_payments, get_payment_stats, get_merchant_analytics, get_recent_orders
 from mcp_server.releases_server import fetch_latest_releases, fetch_gateway_updates, fetch_all_gateway_updates
 from mcp_server.architecture_server import (
     get_db_schema, get_frontend_pattern, get_backend_pattern,
@@ -732,6 +733,91 @@ TOOL_DEFINITIONS = [
         },
     },
 
+    # ── Payment history tool ─────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_recent_payments",
+            "description": (
+                "Get the merchant's recent payment events from the webhook log. "
+                "Shows payment address, amount, status (unconfirmed/confirmed), and timestamp. "
+                "Use this when the merchant asks 'did I get paid?', 'show my recent payments', "
+                "'what's the status of my last payment?', or any question about their payment history."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of recent payments to return (default 10, max 50)",
+                    },
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_payment_stats",
+            "description": (
+                "Get aggregate payment statistics: total events, confirmed payments, and total BTC received. "
+                "Use when the merchant asks 'how many payments have I received?', 'what's my total revenue?', "
+                "or wants a summary of their payment activity."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+
+    # ── Merchant analytics tools ────────────────────────────────────────────────
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_analytics",
+            "description": (
+                "Get full merchant analytics: revenue, profit, margin, order counts, top products, and daily trends. "
+                "Use when the merchant asks 'how much did I make?', 'what's my revenue?', 'what's my profit?', "
+                "'what's my best selling product?', 'how is my business doing?', or any analytics/performance question."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "period": {
+                        "type": "string",
+                        "enum": ["today", "7d", "30d", "all"],
+                        "description": "Time period: 'today', '7d' (last 7 days), '30d' (last 30 days), or 'all' (all time). Default: all",
+                    },
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_recent_orders",
+            "description": (
+                "Get the merchant's recent orders with product names, prices, BTC amounts, and status. "
+                "Use when the merchant asks 'show my orders', 'what did I sell recently?', "
+                "'what's my last order?', or wants to see their order history."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of recent orders to return (default 10, max 50)",
+                    },
+                },
+                "required": [],
+            },
+        },
+    },
+
     # ── Architecture MCP tools ────────────────────────────────────────────────
     {
         "type": "function",
@@ -897,7 +983,7 @@ TOOL_DEFINITIONS = [
 ]
 
 
-def run_tool(name: str, inputs: dict) -> str:
+def run_tool(name: str, inputs: dict, merchant_email: str = "") -> str:
     if name == "get_btc_balance":
         result = blockonomics.get_balance(inputs["address"])
         btc = result["confirmed"] / 1e8
@@ -1137,6 +1223,75 @@ def run_tool(name: str, inputs: dict) -> str:
 
     elif name == "validate_ucp_manifest":
         return validate_ucp_manifest(inputs["manifest_json"])
+
+    # ── Payment history handlers ─────────────────────────────────────────────
+    elif name == "get_my_recent_payments":
+        limit = min(inputs.get("limit", 10), 50)
+        events = db_get_recent_payments(limit)
+        if not events:
+            return "No payment events recorded yet. Payments will appear here once your webhook receives its first transaction."
+        lines = [f"Recent payments ({len(events)} shown):\n"]
+        for e in events:
+            btc = e["value_btc"]
+            sats = e["value_satoshis"]
+            lines.append(
+                f"  {e['created_at'][:16]} | {e['status_label']:>20} | "
+                f"{btc:.8f} BTC ({sats:,} sats) | addr={e['addr'][:12]}... | txid={e['txid'][:12]}..."
+            )
+        return "\n".join(lines)
+
+    elif name == "get_my_payment_stats":
+        stats = get_payment_stats()
+        return (
+            f"Payment summary:\n"
+            f"  Total events received: {stats['total_events']}\n"
+            f"  Confirmed payments: {stats['confirmed_payments']}\n"
+            f"  Total BTC received (confirmed): {stats['total_btc_received']:.8f} BTC"
+        )
+
+    # ── Merchant analytics handlers ─────────────────────────────────────────────
+    elif name == "get_my_analytics":
+        if not merchant_email:
+            return "I can't look up your analytics — no merchant account is linked to this session. Please sign in to your dashboard first."
+        period = inputs.get("period", "all")
+        a = get_merchant_analytics(merchant=merchant_email, period=period)
+        lines = [
+            f"Your Analytics ({a['period'].upper()}):",
+            f"  Revenue:        ${a['revenue_usd']:,.2f}",
+            f"  Cost of Goods:  ${a['total_cost_usd']:,.2f}",
+            f"  Fees Paid:      ${a['total_fees_usd']:,.2f}",
+            f"  Gross Profit:   ${a['gross_profit_usd']:,.2f}",
+            f"  Profit Margin:  {a['profit_margin_pct']}%",
+            f"  Total Orders:   {a['total_orders']} (confirmed: {a['confirmed_orders']}, pending: {a['pending_orders']})",
+            f"  Avg Order:      ${a['avg_order_usd']:,.2f}",
+            f"  Largest Order:  ${a['largest_order_usd']:,.2f}",
+            f"  BTC Received:   {a['total_btc_received']:.8f} BTC",
+        ]
+        if a["top_products"]:
+            lines.append("\nTop Products:")
+            for p in a["top_products"]:
+                lines.append(f"  {p['product']}: {p['units_sold']} sold, ${p['revenue_usd']:,.2f} revenue, ${p['profit_usd']:,.2f} profit")
+        if a["daily_revenue"]:
+            lines.append(f"\nDaily Revenue (last {len(a['daily_revenue'])} days):")
+            for d in a["daily_revenue"][-7:]:
+                lines.append(f"  {d['date']}: ${d['revenue_usd']:,.2f} ({d['orders']} orders, {d['btc']:.8f} BTC)")
+        return "\n".join(lines)
+
+    elif name == "get_my_recent_orders":
+        if not merchant_email:
+            return "I can't look up your orders — no merchant account is linked to this session. Please sign in to your dashboard first."
+        limit = min(inputs.get("limit", 10), 50)
+        orders = get_recent_orders(merchant=merchant_email, limit=limit)
+        if not orders:
+            return "No orders recorded yet for your account. Orders will appear here once your first sale is processed."
+        lines = [f"Your recent orders ({len(orders)} shown):\n"]
+        for o in orders:
+            lines.append(
+                f"  {o['created_at'][:16]} | {o['order_id'][:12]}... | "
+                f"{o['product_name'] or '—':20s} | ${o['sale_price_usd']:.2f} | "
+                f"{o['btc_amount']:.6f} BTC | {o['status']}"
+            )
+        return "\n".join(lines)
 
     # ── Architecture MCP handlers ─────────────────────────────────────────────
     elif name == "list_architecture_topics":

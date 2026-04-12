@@ -6,3 +6,11 @@ python-dotenv==1.0.1
 pydantic==2.9.2
 # Google OAuth token verification (needed when GOOGLE_CLIENT_ID is set)
 google-auth==2.29.0
+# Telegram bot integration
+python-telegram-bot==21.6
+# PostgreSQL driver (production database)
+psycopg2-binary==2.9.9
+# Redis (rate limiting + CSRF tokens across multiple workers)
+redis==5.0.8
+# Testing
+pytest==8.3.2
