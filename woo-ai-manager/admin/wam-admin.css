@@ -1,0 +1,169 @@
+/* Woo AI Manager — Admin styles */
+
+/* ── Chat panel ───────────────────────────────────────────────────── */
+#wam-chat-wrap h1 { margin-bottom: 12px; }
+
+#wam-chat-container {
+    display: flex;
+    flex-direction: column;
+    max-width: 800px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Quick actions */
+#wam-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 16px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+}
+
+.wam-quick-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 1px solid #2271b1;
+    border-radius: 4px;
+    background: #fff;
+    color: #2271b1;
+    cursor: pointer;
+}
+.wam-quick-btn:hover { background: #2271b1; color: #fff; }
+
+/* Message list */
+#wam-messages {
+    flex: 1;
+    min-height: 320px;
+    max-height: 520px;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.wam-msg {
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.wam-msg.user {
+    align-self: flex-end;
+    background: #2271b1;
+    color: #fff;
+    border-bottom-right-radius: 2px;
+}
+
+.wam-msg.assistant {
+    align-self: flex-start;
+    background: #f0f0f1;
+    color: #1d2327;
+    border-bottom-left-radius: 2px;
+}
+
+.wam-msg.error {
+    align-self: flex-start;
+    background: #fcf0f1;
+    border: 1px solid #cc1818;
+    color: #8a1f1f;
+}
+
+.wam-msg.thinking {
+    align-self: flex-start;
+    background: #f0f0f1;
+    color: #666;
+    font-style: italic;
+}
+
+/* Input area */
+#wam-input-area {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+#wam-input {
+    flex: 1;
+    resize: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.4;
+}
+#wam-input:focus { border-color: #2271b1; outline: none; box-shadow: 0 0 0 2px rgba(34,113,177,.15); }
+
+#wam-send {
+    align-self: flex-end;
+    padding: 8px 18px;
+    background: #2271b1;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+#wam-send:hover:not(:disabled) { background: #135e96; }
+#wam-send:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── Dashboard widget ─────────────────────────────────────────────── */
+.wam-widget-stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.wam-stat {
+    flex: 1;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 10px 12px;
+    text-align: center;
+}
+
+.wam-stat-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.wam-stat-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1d2327;
+    line-height: 1.2;
+}
+
+.wam-stat-sub {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+}
+
+.wam-widget-alerts {
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+.wam-widget-alerts ul { margin: 4px 0 0 16px; }
+.wam-widget-alerts li { margin-bottom: 2px; }
+
+.wam-widget-cta { margin-top: 10px; }

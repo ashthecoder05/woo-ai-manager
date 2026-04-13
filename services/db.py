@@ -158,6 +158,7 @@ def init_db() -> None:
             ("wc_webhook_secret", "TEXT"),
             ("daily_chat_count",  "INTEGER NOT NULL DEFAULT 0"),
             ("chat_count_date",   "TEXT"),
+            ("plugin_credits",    "INTEGER NOT NULL DEFAULT 50"),
         ]:
             try:
                 _execute(conn, f"ALTER TABLE merchants ADD COLUMN {col} {definition}")
@@ -248,6 +249,41 @@ def check_and_increment_chat(email: str, daily_limit: int) -> tuple[bool, int]:
             (count + 1, today, email.lower()))
         conn.commit()
         return True, count + 1
+
+
+def get_plugin_credits(email: str) -> int:
+    """Return remaining plugin credits for a merchant."""
+    init_db()
+    ph = _ph()
+    with _connect() as conn:
+        row = _fetchone(conn,
+            f"SELECT plugin_credits FROM merchants WHERE email = {ph}",
+            (email.lower(),))
+    return int(row["plugin_credits"]) if row else 0
+
+
+def check_and_decrement_plugin_credits(email: str) -> tuple[bool, int]:
+    """
+    Atomically check and decrement plugin credits.
+    Returns (allowed: bool, credits_remaining: int).
+    """
+    init_db()
+    ph = _ph()
+    with _connect() as conn:
+        row = _fetchone(conn,
+            f"SELECT plugin_credits FROM merchants WHERE email = {ph}",
+            (email.lower(),))
+        if not row:
+            return False, 0
+        credits = int(row["plugin_credits"] or 0)
+        if credits <= 0:
+            return False, 0
+        now = datetime.now(tz=timezone.utc).isoformat()
+        _execute(conn,
+            f"UPDATE merchants SET plugin_credits = plugin_credits - 1, updated_at = {ph} WHERE email = {ph}",
+            (now, email.lower()))
+        conn.commit()
+        return True, credits - 1
 
 
 def get_wc_webhook_secret(email: str) -> str:

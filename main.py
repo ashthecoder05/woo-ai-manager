@@ -22,6 +22,7 @@ from services.db import (
     get_chat_stats, record_chat, create_order, update_order_status,
     get_recent_orders, get_merchant_analytics, get_order,
     mark_merchant_verified, check_and_increment_chat, get_wc_webhook_secret,
+    check_and_decrement_plugin_credits, get_plugin_credits,
 )
 from webhook.handler import router as webhook_router
 from telegram_bot.bot import start_bot, stop_bot, is_running as tg_is_running, get_running_bots
@@ -615,6 +616,125 @@ async def api_analytics(
     if period not in allowed_periods:
         period = "all"
     return get_merchant_analytics(merchant=merchant or "", period=period)
+
+
+# ── Plugin endpoints ─────────────────────────────────────────────────────────
+
+class PluginSignInRequest(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        v = v.strip().lower()
+        if not v or "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Valid email is required")
+        return v
+
+
+class PluginChatRequest(BaseModel):
+    email: str
+    token: str
+    message: str
+    store_context: Optional[str] = ""
+
+    @field_validator("message")
+    @classmethod
+    def message_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("message must not be empty")
+        if len(v) > 2000:
+            raise ValueError("message too long")
+        return v.strip()
+
+
+@app.post("/api/plugin/signin")
+async def plugin_signin(req: PluginSignInRequest, request: Request):
+    """
+    Minimal sign-in for the WP plugin.
+    Creates the merchant if new (with 50 free credits), returns a session token.
+    """
+    ip = _client_ip(request)
+    if not _check_rate(ip, max_requests=10, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many requests.")
+
+    merchant = upsert_merchant(email=req.email)
+    credits  = get_plugin_credits(req.email)
+    token    = _make_session_token(req.email)
+
+    security_logger.info("Plugin signin | ip=%s email=%s credits=%d", ip, req.email, credits)
+    return {
+        "status":          "ok",
+        "email":           req.email,
+        "session_token":   token,
+        "credits_remaining": credits,
+    }
+
+
+@app.post("/api/plugin/chat")
+async def plugin_chat(req: PluginChatRequest, request: Request):
+    """
+    Chat endpoint for the WP plugin.
+    Verifies the session token, deducts a credit, calls Azure OpenAI,
+    and returns the reply along with the remaining credit balance.
+    """
+    ip = _client_ip(request)
+    if not _check_rate(ip, max_requests=20, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many requests.")
+
+    email = req.email.strip().lower()
+
+    if not _verify_session_token(email, req.token):
+        raise HTTPException(status_code=401, detail="Invalid or expired session. Please reconnect in plugin settings.")
+
+    allowed, credits_left = check_and_decrement_plugin_credits(email)
+    if not allowed:
+        raise HTTPException(
+            status_code=402,
+            detail="You've used all 50 free queries. Upgrade to continue.",
+        )
+
+    # Build a store-manager system prompt with the injected WC context
+    store_name    = get_merchant(email) or {}
+    system_prompt = _build_plugin_system_prompt(req.store_context or "")
+
+    try:
+        from agent.core import client as az_client
+        from config import AZURE_OPENAI_DEPLOYMENT
+        response = az_client.chat.completions.create(
+            model=AZURE_OPENAI_DEPLOYMENT,
+            max_tokens=512,
+            temperature=0.3,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": req.message},
+            ],
+        )
+        reply = response.choices[0].message.content or ""
+    except Exception as e:
+        logger.error("Plugin chat Azure error: %s", e)
+        raise HTTPException(status_code=500, detail="AI service temporarily unavailable.")
+
+    record_chat(merchant=email, gateway="woo-plugin")
+    return {
+        "reply":             reply,
+        "credits_remaining": credits_left,
+    }
+
+
+def _build_plugin_system_prompt(store_context: str) -> str:
+    return f"""You are an AI store manager embedded inside a WooCommerce WP Admin dashboard.
+You are talking to the STORE OWNER — not a developer, not a customer.
+
+{store_context}
+
+## Your job
+- Help the merchant understand what is happening in their store right now.
+- Lead with the direct answer. Be concise: 2–4 sentences max.
+- Only state numbers that appear in the store snapshot above. Never invent data.
+- Use plain language. No jargon, no emojis, no preamble.
+- If you don't have the data to answer, say so clearly and suggest where to find it.
+"""
 
 
 # ── WooCommerce webhook setup endpoint ──────────────────────────────────────
