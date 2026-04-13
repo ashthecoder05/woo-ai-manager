@@ -61,7 +61,22 @@
       "Bash(curl -s -b /tmp/wam-cookies.txt 'http://localhost:8080/wp-admin/admin.php?page=wam-chat' -o /tmp/wam-page.html -w '%{http_code}')",
       "Read(//tmp/**)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/wp-admin/)",
-      "Bash(mysql -u root -pwoo_demo_pass woo_demo -e \"SELECT option_name, LEFT\\(option_value, 20\\) as value_preview FROM wp_options WHERE option_name LIKE 'wam_%';\")"
+      "Bash(mysql -u root -pwoo_demo_pass woo_demo -e \"SELECT option_name, LEFT\\(option_value, 20\\) as value_preview FROM wp_options WHERE option_name LIKE 'wam_%';\")",
+      "Bash(/opt/homebrew/opt/python@3.11/bin/python3 -c ':*)",
+      "Bash(python3 -c ':*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/wp-admin/admin.php?page=wam-settings)",
+      "Bash(curl -s -b /tmp/wam-cookies.txt \"http://localhost:8080/wp-admin/admin.php?page=wam-settings\" -o /tmp/wam-settings.html -w \"%{http_code}\")",
+      "Bash(curl -s -b /tmp/wam-cookies.txt \"http://localhost:8080/wp-admin/admin.php?page=wam-settings\" -o /tmp/wam-s.html -w \"%{http_code}\")",
+      "Bash(uvicorn main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -s http://localhost:8000/api/plugin/config)",
+      "Bash(curl -s http://localhost:8000/openapi.json)",
+      "Bash(python3 -c \"import sys,json; paths=json.load\\(sys.stdin\\)['paths']; [print\\(p\\) for p in paths if 'plugin' in p]\")",
+      "Bash(python3 -c \"from main import app; routes=[r.path for r in app.routes]; [print\\(r\\) for r in routes if 'plugin' in r]\")",
+      "Bash(xargs kill:*)",
+      "Bash(mysql -u root -pwoo_demo_pass woo_demo -e ':*)",
+      "Bash(/opt/homebrew/opt/php/bin/php)"
     ]
   }
 }

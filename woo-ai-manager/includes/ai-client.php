@@ -76,18 +76,19 @@ function wam_chat( string $user_message, string $store_context = '' ) {
 }
 
 /**
- * Sign in with email — creates an account on the backend (50 free credits)
- * and stores the session token locally.
+ * Sign in via Google ID token — backend verifies it, creates the account
+ * (50 free credits if new), and returns a session token we store locally.
  *
+ * @param string $google_token  The credential returned by the Google Sign-In button.
  * @return array|WP_Error
  */
-function wam_plugin_signin( string $email ) {
+function wam_plugin_signin( string $google_token ) {
     $backend = rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' );
 
     $response = wp_remote_post( $backend . '/api/plugin/signin', [
         'timeout' => 15,
         'headers' => [ 'Content-Type' => 'application/json' ],
-        'body'    => wp_json_encode( [ 'email' => $email ] ),
+        'body'    => wp_json_encode( [ 'google_token' => $google_token ] ),
     ] );
 
     if ( is_wp_error( $response ) ) {
@@ -97,12 +98,16 @@ function wam_plugin_signin( string $email ) {
     $code = wp_remote_retrieve_response_code( $response );
     $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
+    if ( $code === 401 ) {
+        return new WP_Error( 'wam_google_invalid', $data['detail'] ?? 'Google sign-in failed.' );
+    }
     if ( $code !== 200 ) {
-        return new WP_Error( 'wam_signin_failed', $data['detail'] ?? 'Sign-in failed.' );
+        return new WP_Error( 'wam_signin_failed', $data['detail'] ?? 'Sign-in failed (HTTP ' . $code . ').' );
     }
 
-    update_option( 'wam_merchant_email',   $data['email'] );
-    update_option( 'wam_session_token',    $data['session_token'] );
+    update_option( 'wam_merchant_email',    $data['email'] );
+    update_option( 'wam_merchant_name',     $data['name'] ?? '' );
+    update_option( 'wam_session_token',     $data['session_token'] );
     update_option( 'wam_credits_remaining', (int) $data['credits_remaining'] );
 
     return $data;

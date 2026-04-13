@@ -56,6 +56,7 @@
             thinking.remove();
             if (json.success) {
                 appendMessage('assistant', json.data.reply);
+                updateCredits(json.data.credits_remaining);
             } else {
                 var errMsg = (json.data && json.data.message) ? json.data.message : 'Something went wrong.';
                 appendMessage('error', errMsg);
@@ -84,5 +85,13 @@
         sendBtn.disabled = on;
         input.disabled   = on;
         quickBtns.forEach(function (b) { b.disabled = on; });
+    }
+
+    function updateCredits(n) {
+        var el = document.getElementById('wam-credits');
+        if (el && typeof n === 'number') {
+            el.textContent = n + ' queries left';
+            el.style.color = n <= 5 ? '#cc1818' : '#666';
+        }
     }
 }());

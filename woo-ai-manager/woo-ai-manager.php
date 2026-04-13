@@ -46,8 +46,9 @@ function wam_init() {
     // Dashboard widget
     add_action( 'wp_dashboard_setup', 'wam_register_dashboard_widget' );
 
-    // AJAX handlers for the chat panel
-    add_action( 'wp_ajax_wam_chat', 'wam_ajax_chat' );
+    // AJAX handlers
+    add_action( 'wp_ajax_wam_chat',          'wam_ajax_chat' );
+    add_action( 'wp_ajax_wam_google_signin', 'wam_ajax_google_signin' );
 }
 
 // ── Menus ─────────────────────────────────────────────────────────────────────
@@ -104,6 +105,28 @@ function wam_enqueue_assets( $hook ) {
     ] );
 }
 
+// ── AJAX: Google sign-in ──────────────────────────────────────────────────────
+function wam_ajax_google_signin() {
+    check_ajax_referer( 'wam_google_signin', 'nonce' );
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( [ 'message' => 'Unauthorised.' ], 403 );
+    }
+
+    $google_token = isset( $_POST['google_token'] ) ? sanitize_text_field( wp_unslash( $_POST['google_token'] ) ) : '';
+    if ( ! $google_token ) {
+        wp_send_json_error( [ 'message' => 'Missing Google token.' ], 400 );
+    }
+
+    $result = wam_plugin_signin( $google_token );
+
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( [ 'message' => $result->get_error_message() ], 401 );
+    }
+
+    wp_send_json_success( $result );
+}
+
 // ── AJAX: chat ────────────────────────────────────────────────────────────────
 function wam_ajax_chat() {
     check_ajax_referer( 'wam_chat', 'nonce' );
@@ -120,11 +143,15 @@ function wam_ajax_chat() {
     // Fetch live store context to give the AI real data
     $store_context = wam_get_store_context();
 
-    $reply = wam_chat( $message, $store_context );
+    $result = wam_chat( $message, $store_context );
 
-    if ( is_wp_error( $reply ) ) {
-        wp_send_json_error( [ 'message' => $reply->get_error_message() ], 500 );
+    if ( is_wp_error( $result ) ) {
+        $code = $result->get_error_code() === 'wam_no_credits' ? 402 : 500;
+        wp_send_json_error( [ 'message' => $result->get_error_message() ], $code );
     }
 
-    wp_send_json_success( [ 'reply' => $reply ] );
+    wp_send_json_success( [
+        'reply'             => $result['reply'],
+        'credits_remaining' => $result['credits_remaining'],
+    ] );
 }

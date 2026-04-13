@@ -116,32 +116,40 @@ function wam_recent_orders( int $limit = 5 ): array {
 }
 
 function wam_low_stock_products( int $limit = 5 ): array {
-    $threshold = (int) get_option( 'woocommerce_notify_low_stock_amount', 2 );
-    $args = [
-        'post_type'      => 'product',
-        'posts_per_page' => $limit,
-        'meta_query'     => [
-            'relation' => 'AND',
-            [
-                'key'     => '_manage_stock',
-                'value'   => 'yes',
-            ],
-            [
-                'key'     => '_stock',
-                'value'   => $threshold,
-                'compare' => '<=',
-                'type'    => 'NUMERIC',
-            ],
-        ],
-    ];
-    $query    = new WP_Query( $args );
-    $result   = [];
-    foreach ( $query->posts as $post ) {
-        $product  = wc_get_product( $post->ID );
+    global $wpdb;
+
+    // Use per-product low_stock_amount when set, fall back to global threshold.
+    // A product is low-stock when: stock <= COALESCE(per-product threshold, global threshold).
+    $global_threshold = (int) get_option( 'woocommerce_notify_low_stock_amount', 2 );
+
+    $rows = $wpdb->get_results( $wpdb->prepare(
+        "SELECT p.ID, p.post_title,
+                CAST(stock.meta_value AS SIGNED)     AS qty,
+                CAST(low_amt.meta_value AS SIGNED)   AS low_stock_amount
+           FROM {$wpdb->posts} p
+           JOIN {$wpdb->postmeta} ms
+             ON ms.post_id = p.ID AND ms.meta_key = '_manage_stock' AND ms.meta_value = 'yes'
+           JOIN {$wpdb->postmeta} stock
+             ON stock.post_id = p.ID AND stock.meta_key = '_stock'
+           LEFT JOIN {$wpdb->postmeta} low_amt
+             ON low_amt.post_id = p.ID AND low_amt.meta_key = '_low_stock_amount'
+          WHERE p.post_type   = 'product'
+            AND p.post_status = 'publish'
+            AND CAST(stock.meta_value AS SIGNED) <= COALESCE(
+                NULLIF(CAST(low_amt.meta_value AS SIGNED), 0),
+                %d
+            )
+          ORDER BY qty ASC
+          LIMIT %d",
+        $global_threshold, $limit
+    ) );
+
+    $result = [];
+    foreach ( $rows as $r ) {
         $result[] = [
-            'id'    => $post->ID,
-            'name'  => $post->post_title,
-            'stock' => (int) $product->get_stock_quantity(),
+            'id'    => (int) $r->ID,
+            'name'  => $r->post_title,
+            'stock' => (int) $r->qty,
         ];
     }
     return $result;

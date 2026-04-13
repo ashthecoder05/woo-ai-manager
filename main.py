@@ -620,17 +620,20 @@ async def api_analytics(
 
 # ── Plugin endpoints ─────────────────────────────────────────────────────────
 
+@app.get("/api/plugin/config")
+async def plugin_config():
+    """
+    Returns public configuration the WP plugin needs at boot time.
+    The plugin fetches this once so secrets never have to be hardcoded in PHP.
+    """
+    return {
+        "google_client_id": os.getenv("GOOGLE_CLIENT_ID", ""),
+    }
+
+
+
 class PluginSignInRequest(BaseModel):
-    email: str
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v):
-        v = v.strip().lower()
-        if not v or "@" not in v or "." not in v.split("@")[-1]:
-            raise ValueError("Valid email is required")
-        return v
-
+    google_token: str  # Google ID token from the Sign-In button
 
 class PluginChatRequest(BaseModel):
     email: str
@@ -651,22 +654,43 @@ class PluginChatRequest(BaseModel):
 @app.post("/api/plugin/signin")
 async def plugin_signin(req: PluginSignInRequest, request: Request):
     """
-    Minimal sign-in for the WP plugin.
-    Creates the merchant if new (with 50 free credits), returns a session token.
+    Google SSO sign-in for the WP plugin.
+    Verifies the Google ID token, creates the merchant if new (50 free credits),
+    and returns a session token the plugin stores locally.
     """
     ip = _client_ip(request)
     if not _check_rate(ip, max_requests=10, window_seconds=60):
         raise HTTPException(status_code=429, detail="Too many requests.")
 
-    merchant = upsert_merchant(email=req.email)
-    credits  = get_plugin_credits(req.email)
-    token    = _make_session_token(req.email)
+    google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+    if not google_client_id:
+        raise HTTPException(status_code=500, detail="Google SSO is not configured on this server.")
 
-    security_logger.info("Plugin signin | ip=%s email=%s credits=%d", ip, req.email, credits)
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+        id_info = google_id_token.verify_oauth2_token(
+            req.google_token,
+            google_requests.Request(),
+            google_client_id,
+        )
+        email = id_info["email"].lower().strip()
+        name  = id_info.get("name", "")
+    except Exception as e:
+        security_logger.warning("Plugin Google token verification failed | ip=%s error=%s", ip, e)
+        raise HTTPException(status_code=401, detail="Invalid Google token. Please try signing in again.")
+
+    upsert_merchant(email=email, name=name)
+    mark_merchant_verified(email)
+    credits = get_plugin_credits(email)
+    token   = _make_session_token(email)
+
+    security_logger.info("Plugin signin (Google SSO) | ip=%s email=%s credits=%d", ip, email, credits)
     return {
-        "status":          "ok",
-        "email":           req.email,
-        "session_token":   token,
+        "status":            "ok",
+        "email":             email,
+        "name":              name,
+        "session_token":     token,
         "credits_remaining": credits,
     }
 
@@ -726,14 +750,24 @@ def _build_plugin_system_prompt(store_context: str) -> str:
     return f"""You are an AI store manager embedded inside a WooCommerce WP Admin dashboard.
 You are talking to the STORE OWNER — not a developer, not a customer.
 
+## Data you always have access to
+The store snapshot below is fetched live from the database every time the merchant asks a question. It always contains:
+- Revenue totals for today, last 7 days, and last 30 days
+- The 5 most recent orders (customer name, total, status, date)
+- Top 5 selling products in the last 30 days (units sold, revenue)
+- Products that are low or out of stock (only shown if any exist)
+
+If a section is absent from the snapshot (e.g. no low-stock products listed), it means there are none — not that you lack access. Never tell the merchant you don't have access to orders, revenue, products, or stock data.
+
+## Live Store Snapshot
 {store_context}
 
 ## Your job
-- Help the merchant understand what is happening in their store right now.
-- Lead with the direct answer. Be concise: 2–4 sentences max.
-- Only state numbers that appear in the store snapshot above. Never invent data.
-- Use plain language. No jargon, no emojis, no preamble.
-- If you don't have the data to answer, say so clearly and suggest where to find it.
+- Answer directly from the snapshot above. Lead with the answer, no preamble.
+- Be concise: 2–4 sentences for most questions.
+- Only quote numbers that appear in the snapshot. Never invent figures.
+- Use plain language — the merchant is a shop owner, not a developer.
+- If the merchant asks for something genuinely outside the snapshot (e.g. a specific customer's email, shipping details), say what you can see and direct them to WooCommerce → Orders for the rest.
 """
 
 
