@@ -247,3 +247,95 @@
 }
 .wam-widget-notice--error   { background: #fce8e8; color: #8a1f1f; }
 .wam-widget-notice--warning { background: #fef9e7; color: #7a5c00; }
+
+/* ── Tool-call steps (streaming visualization) ────────────────────── */
+.wam-steps {
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    max-width: 78%;
+    margin-bottom: 2px;
+}
+
+.wam-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    background: #f6f7f7;
+    border: 1px solid #e2e4e7;
+    animation: wam-step-in .18s ease-out both;
+    transition: background .2s, border-color .2s;
+}
+
+.wam-step.running {
+    background: #f0f6ff;
+    border-color: #c5d9f0;
+}
+
+.wam-step.done {
+    background: #f6faf6;
+    border-color: #c3ddc3;
+}
+
+.wam-step-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.wam-step-label {
+    flex: 1;
+    font-weight: 500;
+    color: #2c3338;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.wam-step-status {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #666;
+    font-size: 11px;
+}
+
+/* Spinning loader ring */
+.wam-step-spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid #c5d9f0;
+    border-top-color: #2271b1;
+    border-radius: 50%;
+    animation: wam-spin .7s linear infinite;
+    flex-shrink: 0;
+}
+
+/* Checkmark after done */
+.wam-step-check {
+    color: #2a7a2a;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.wam-step-dur {
+    color: #888;
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes wam-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes wam-step-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0);   }
+}

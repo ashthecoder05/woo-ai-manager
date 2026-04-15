@@ -277,7 +277,14 @@ def get_customers(
     order: str = "desc",
 ) -> str:
     """Get a list of customers."""
-    params: dict = {"per_page": min(limit, 50), "orderby": orderby, "order": order}
+    # WC /customers only accepts: id, include, name, registered_date, slug, email, username
+    # total_spent and last_active are not supported — fetch more and sort client-side.
+    _VALID_WC_ORDERBY = {"id", "include", "name", "registered_date", "slug", "email", "username"}
+    sort_client_side = orderby not in _VALID_WC_ORDERBY
+
+    fetch_limit = min(limit * 5, 50) if sort_client_side else min(limit, 50)
+    wc_orderby = "registered_date" if sort_client_side else orderby
+    params: dict = {"per_page": fetch_limit, "orderby": wc_orderby, "order": order}
     if search:
         params["search"] = search
 
@@ -298,6 +305,16 @@ def get_customers(
             "city": c.get("billing", {}).get("city", ""),
             "country": c.get("billing", {}).get("country", ""),
         })
+
+    # Client-side sort for fields WC doesn't support natively
+    if sort_client_side:
+        reverse = order != "asc"
+        if orderby == "total_spent":
+            customers.sort(key=lambda x: float(x.get("total_spent") or 0), reverse=reverse)
+        elif orderby == "last_active":
+            customers.sort(key=lambda x: x.get("last_order_date") or "", reverse=reverse)
+        customers = customers[:limit]
+
     return json.dumps({"count": len(customers), "customers": customers})
 
 

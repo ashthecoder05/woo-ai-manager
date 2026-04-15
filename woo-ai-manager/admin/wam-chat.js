@@ -44,10 +44,65 @@
         setLoading(true);
 
         if (wamData.storeConnected && wamData.backendUrl && wamData.sessionToken) {
-            // Direct mode: JS → backend → WC REST API (no WordPress AJAX in the loop)
-            // This avoids the deadlock where WordPress waits for the backend which
-            // waits for WordPress to handle a WC REST API call.
-            fetch(wamData.backendUrl + '/api/plugin/chat', {
+            // Streaming mode: JS → backend SSE → WC REST API (no WordPress in the loop)
+            // Events arrive as tool_start / tool_done / reply — we render each live.
+            var stepsEl   = null;
+            var thinkingEl = thinking;
+            var settled   = false;
+
+            function ensureSteps() {
+                if (!stepsEl) {
+                    thinkingEl.remove();
+                    stepsEl = document.createElement('div');
+                    stepsEl.className = 'wam-steps';
+                    messages.appendChild(stepsEl);
+                    messages.scrollTop = messages.scrollHeight;
+                }
+                return stepsEl;
+            }
+
+            function handleStreamEvent(event) {
+                if (event.type === 'tool_start') {
+                    var steps = ensureSteps();
+                    var step  = document.createElement('div');
+                    step.className    = 'wam-step running';
+                    step.dataset.tcId = event.id;
+                    step.innerHTML    =
+                        '<span class="wam-step-icon">' + (event.icon || '🔍') + '</span>' +
+                        '<span class="wam-step-label">' + escapeHtml(event.label) + '</span>' +
+                        '<span class="wam-step-status"><span class="wam-step-spinner"></span></span>';
+                    steps.appendChild(step);
+                    messages.scrollTop = messages.scrollHeight;
+
+                } else if (event.type === 'tool_done') {
+                    var steps = ensureSteps();
+                    var step  = steps.querySelector('[data-tc-id="' + event.id + '"]');
+                    if (step) {
+                        step.classList.remove('running');
+                        step.classList.add('done');
+                        var dur = event.duration_ms < 1000
+                            ? event.duration_ms + 'ms'
+                            : (event.duration_ms / 1000).toFixed(1) + 's';
+                        step.querySelector('.wam-step-status').innerHTML =
+                            '<span class="wam-step-check">✓</span> <span class="wam-step-dur">' + dur + '</span>';
+                    }
+
+                } else if (event.type === 'reply') {
+                    settled = true;
+                    if (!stepsEl) thinkingEl.remove();
+                    appendMessage('assistant', event.content || '');
+                    updateCredits(event.credits_remaining);
+                    setLoading(false);
+
+                } else if (event.type === 'error') {
+                    settled = true;
+                    if (!stepsEl) thinkingEl.remove();
+                    handleError(event.message || 'Something went wrong.');
+                    setLoading(false);
+                }
+            }
+
+            fetch(wamData.backendUrl + '/api/plugin/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -57,25 +112,37 @@
                 }),
             })
             .then(function (res) {
-                return res.json().then(function (json) {
-                    return { status: res.status, body: json };
-                });
-            })
-            .then(function (r) {
-                thinking.remove();
-                if (r.status === 200) {
-                    appendMessage('assistant', r.body.reply || '');
-                    updateCredits(r.body.credits_remaining);
-                } else {
-                    var msg = r.body.detail || 'Something went wrong.';
-                    handleError(msg);
+                if (!res.ok) {
+                    return res.json().then(function (body) {
+                        throw new Error(body.detail || 'HTTP ' + res.status);
+                    });
                 }
+                var reader  = res.body.getReader();
+                var decoder = new TextDecoder();
+                var buf     = '';
+
+                function pump() {
+                    return reader.read().then(function (chunk) {
+                        if (chunk.done) return;
+                        buf += decoder.decode(chunk.value, { stream: true });
+                        var lines = buf.split('\n');
+                        buf = lines.pop(); // keep incomplete line
+                        lines.forEach(function (line) {
+                            if (!line.startsWith('data: ')) return;
+                            try { handleStreamEvent(JSON.parse(line.slice(6))); } catch (_) {}
+                        });
+                        return pump();
+                    });
+                }
+                return pump();
             })
-            .catch(function () {
-                thinking.remove();
-                appendMessage('error', 'Network error — could not reach the server.');
-            })
-            .finally(function () { setLoading(false); });
+            .catch(function (err) {
+                if (!settled) {
+                    thinkingEl.remove();
+                    handleError(err.message || 'Network error — could not reach the server.');
+                    setLoading(false);
+                }
+            });
 
         } else {
             // Fallback: WordPress AJAX → backend (static snapshot mode)
@@ -174,6 +241,14 @@
         sendBtn.disabled = on;
         input.disabled   = on;
         quickBtns.forEach(function (b) { b.disabled = on; });
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
     function updateCredits(n) {

@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from fastapi import FastAPI, HTTPException, Query, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, field_validator
@@ -845,6 +845,91 @@ If a section is absent from the snapshot (e.g. no low-stock products listed), it
 - Use plain language — the merchant is a shop owner, not a developer.
 - If the merchant asks for something genuinely outside the snapshot (e.g. a specific customer's email, shipping details), say what you can see and direct them to WooCommerce → Orders for the rest.
 """
+
+
+@app.post("/api/plugin/chat/stream")
+async def plugin_chat_stream(req: PluginChatRequest, request: Request):
+    """
+    Streaming SSE version of the plugin chat endpoint.
+    Emits tool_start / tool_done events in real time so the UI can show
+    which WC data sources are being queried as the AI thinks.
+    """
+    import asyncio
+    import concurrent.futures
+
+    ip = _client_ip(request)
+    if not _check_rate(ip, max_requests=20, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many requests.")
+
+    email = req.email.strip().lower()
+
+    if not _verify_session_token(email, req.token):
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    allowed, credits_left = check_and_decrement_plugin_credits(email)
+    if not allowed:
+        raise HTTPException(status_code=402, detail="You've used all 50 free queries. Upgrade to continue.")
+
+    wc_creds = get_wc_credentials(email)
+    if not wc_creds:
+        raise HTTPException(status_code=400, detail="Store not connected. Register WC credentials first.")
+
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+
+    def emit(event: dict) -> None:
+        """Thread-safe: push an SSE event from the chat thread into the async queue."""
+        loop.call_soon_threadsafe(queue.put_nowait, event)
+
+    def run_chat() -> None:
+        try:
+            from agent.core import plugin_chat_with_wc_tools_streaming
+            reply = plugin_chat_with_wc_tools_streaming(
+                message=req.message,
+                store_url=wc_creds["store_url"],
+                consumer_key=wc_creds["consumer_key"],
+                consumer_secret=wc_creds["consumer_secret"],
+                emit=emit,
+            )
+            loop.call_soon_threadsafe(queue.put_nowait, {
+                "type": "reply",
+                "content": reply,
+                "credits_remaining": credits_left,
+            })
+        except Exception as e:
+            logger.error("plugin_chat_stream error: %s", e)
+            loop.call_soon_threadsafe(queue.put_nowait, {"type": "error", "message": str(e)})
+        finally:
+            loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel — stream done
+
+    async def event_generator():
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        chat_future = loop.run_in_executor(executor, run_chat)
+        try:
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=120)
+                except asyncio.TimeoutError:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Request timed out.'})}\n\n"
+                    break
+                if event is None:
+                    break
+                yield f"data: {json.dumps(event)}\n\n"
+        finally:
+            await chat_future
+            executor.shutdown(wait=False)
+
+    record_chat(merchant=email, gateway="woo-plugin-stream")
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 # ── WooCommerce webhook setup endpoint ──────────────────────────────────────
