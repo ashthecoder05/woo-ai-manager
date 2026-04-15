@@ -737,7 +737,20 @@ async def plugin_chat(req: PluginChatRequest, request: Request):
         reply = response.choices[0].message.content or ""
     except Exception as e:
         logger.error("Plugin chat Azure error: %s", e)
-        raise HTTPException(status_code=500, detail="AI service temporarily unavailable.")
+        err = str(e).lower()
+        if "token" in err or "length" in err or "maximum" in err:
+            detail = "Your question is too long. Please try asking something shorter."
+            code   = 400
+        elif "rate" in err or "429" in err:
+            detail = "The AI service is busy right now. Please wait a moment and try again."
+            code   = 429
+        elif "auth" in err or "401" in err or "403" in err:
+            detail = "AI service authentication error. Please contact support."
+            code   = 500
+        else:
+            detail = "AI service temporarily unavailable. Please try again in a moment."
+            code   = 503
+        raise HTTPException(status_code=code, detail=detail)
 
     record_chat(merchant=email, gateway="woo-plugin")
     return {

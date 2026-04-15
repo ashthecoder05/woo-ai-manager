@@ -76,7 +76,22 @@
       "Bash(python3 -c \"from main import app; routes=[r.path for r in app.routes]; [print\\(r\\) for r in routes if 'plugin' in r]\")",
       "Bash(xargs kill:*)",
       "Bash(mysql -u root -pwoo_demo_pass woo_demo -e ':*)",
-      "Bash(/opt/homebrew/opt/php/bin/php)"
+      "Bash(/opt/homebrew/opt/php/bin/php)",
+      "Bash(grep -n 'wpdb->get\\\\|wpdb->query\\\\|wpdb->prepare\\\\|$wpdb' /Users/aishwaryaadyanthaya/Aishwarya/AgentHackathon/woo-ai-manager/includes/wc-data.php)",
+      "Bash(curl -s https://www.gnu.org/licenses/gpl-2.0.txt -o /Users/aishwaryaadyanthaya/Aishwarya/AgentHackathon/woo-ai-manager/LICENSE)",
+      "Bash(curl -sL https://www.gnu.org/licenses/gpl-2.0.txt -o /Users/aishwaryaadyanthaya/Aishwarya/AgentHackathon/woo-ai-manager/LICENSE)",
+      "Bash(curl -s -b /tmp/wam-cookies.txt \"http://localhost:8080/wp-admin/admin.php?page=wam-chat\" -o /tmp/wam-chat-check.html -w \"%{http_code}\")",
+      "WebFetch(domain:www.getmesa.com)",
+      "WebFetch(domain:community.shopify.com)",
+      "WebFetch(domain:woocommerce.github.io)",
+      "WebFetch(domain:developer.woocommerce.com)",
+      "WebFetch(domain:shopify.engineering)",
+      "WebFetch(domain:help.shopify.com)",
+      "WebFetch(domain:wearepresta.com)",
+      "WebFetch(domain:qualimero.com)",
+      "WebFetch(domain:www.infocaptor.com)",
+      "WebFetch(domain:alhena.ai)",
+      "WebFetch(domain:woocommerce.com)"
     ]
   }
 }

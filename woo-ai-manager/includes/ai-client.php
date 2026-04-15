@@ -9,7 +9,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// Default backend URL — change this one value for production
+// Your backend URL — change this before distributing the plugin
 define( 'WAM_DEFAULT_BACKEND', 'http://localhost:8000' );
 
 /**

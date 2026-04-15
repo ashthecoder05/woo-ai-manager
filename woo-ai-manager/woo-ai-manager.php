@@ -1,10 +1,11 @@
 <?php
 /**
  * Plugin Name: Woo AI Manager
- * Plugin URI:  https://github.com/your-repo/woo-ai-manager
+ * Plugin URI:  PLACEHOLDER_PLUGIN_URL
  * Description: AI store manager that lives inside your WP Admin — knows your orders, customers, and revenue, and tells you what to do next.
  * Version:     0.1.0
- * Author:      Your Name
+ * Author:      Aishwarya Adyanthaya
+ * Author URI:  PLACEHOLDER_AUTHOR_URL
  * License:     GPL-2.0-or-later
  * Text Domain: woo-ai-manager
  * Requires at least: 6.0
@@ -14,10 +15,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WAM_VERSION',  '0.1.0' );
-define( 'WAM_DIR',      plugin_dir_path( __FILE__ ) );
-define( 'WAM_URL',      plugin_dir_url( __FILE__ ) );
-define( 'WAM_BASENAME', plugin_basename( __FILE__ ) );
+define( 'WAM_VERSION',     '0.1.0' );
+define( 'WAM_DIR',         plugin_dir_path( __FILE__ ) );
+define( 'WAM_URL',         plugin_dir_url( __FILE__ ) );
+define( 'WAM_BASENAME',    plugin_basename( __FILE__ ) );
+define( 'WAM_UPGRADE_URL', 'PLACEHOLDER_UPGRADE_URL' );
 
 // ── Core includes ─────────────────────────────────────────────────────────────
 require_once WAM_DIR . 'includes/wc-data.php';
@@ -99,9 +101,11 @@ function wam_enqueue_assets( $hook ) {
 
     // Pass data to JS
     wp_localize_script( 'wam-chat', 'wamData', [
-        'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-        'nonce'   => wp_create_nonce( 'wam_chat' ),
-        'version' => WAM_VERSION,
+        'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+        'adminUrl'   => admin_url(),
+        'nonce'      => wp_create_nonce( 'wam_chat' ),
+        'upgradeUrl' => WAM_UPGRADE_URL,
+        'version'    => WAM_VERSION,
     ] );
 }
 

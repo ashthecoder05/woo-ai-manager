@@ -13,26 +13,45 @@
     overflow: hidden;
 }
 
+/* Header bar */
+#wam-chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+    font-size: 12px;
+    color: #666;
+}
+
+#wam-credits-display {
+    font-weight: 600;
+    color: #1d2327;
+}
+#wam-credits-display.wam-credits-low { color: #b45309; }
+
 /* Quick actions */
 #wam-quick-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 14px 16px;
-    background: #f9f9f9;
+    padding: 12px 16px;
     border-bottom: 1px solid #eee;
 }
 
 .wam-quick-btn {
-    padding: 6px 12px;
+    padding: 5px 12px;
     font-size: 12px;
     border: 1px solid #2271b1;
     border-radius: 4px;
     background: #fff;
     color: #2271b1;
     cursor: pointer;
+    transition: background .15s, color .15s;
 }
-.wam-quick-btn:hover { background: #2271b1; color: #fff; }
+.wam-quick-btn:hover  { background: #2271b1; color: #fff; }
+.wam-quick-btn:disabled { opacity: .4; cursor: not-allowed; }
 
 /* Message list */
 #wam-messages {
@@ -77,11 +96,42 @@
     color: #8a1f1f;
 }
 
+/* Thinking bubble with animated dots */
 .wam-msg.thinking {
     align-self: flex-start;
     background: #f0f0f1;
-    color: #666;
+    color: #888;
     font-style: italic;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 70px;
+}
+
+.wam-msg.thinking::after {
+    content: '';
+    display: inline-flex;
+    gap: 3px;
+}
+
+.wam-dots {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+}
+.wam-dots span {
+    width: 5px;
+    height: 5px;
+    background: #999;
+    border-radius: 50%;
+    animation: wam-bounce 1.2s ease-in-out infinite;
+}
+.wam-dots span:nth-child(2) { animation-delay: .2s; }
+.wam-dots span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes wam-bounce {
+    0%, 80%, 100% { transform: scale(0.7); opacity: .5; }
+    40%            { transform: scale(1);   opacity: 1;  }
 }
 
 /* Input area */
@@ -115,14 +165,35 @@
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
+    transition: background .15s;
 }
 #wam-send:hover:not(:disabled) { background: #135e96; }
 #wam-send:disabled { opacity: .5; cursor: not-allowed; }
 
+/* ── Setup / upgrade cards ────────────────────────────────────────── */
+.wam-setup-card,
+.wam-upgrade-card {
+    max-width: 520px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+}
+.wam-setup-card h2,
+.wam-upgrade-card h2 { margin-top: 0; }
+
+.wam-setup-icon { font-size: 40px; margin-bottom: 12px; }
+
+.wam-upgrade-card {
+    border-color: #f0c33c;
+    background: #fffdf0;
+}
+
 /* ── Dashboard widget ─────────────────────────────────────────────── */
 .wam-widget-stats {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
@@ -164,6 +235,15 @@
     margin-bottom: 12px;
 }
 .wam-widget-alerts ul { margin: 4px 0 0 16px; }
-.wam-widget-alerts li { margin-bottom: 2px; }
+.wam-widget-alerts li { margin-bottom: 3px; }
 
-.wam-widget-cta { margin-top: 10px; }
+.wam-widget-cta { margin-top: 12px; }
+
+.wam-widget-notice {
+    margin: 10px 0 0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+.wam-widget-notice--error   { background: #fce8e8; color: #8a1f1f; }
+.wam-widget-notice--warning { background: #fef9e7; color: #7a5c00; }

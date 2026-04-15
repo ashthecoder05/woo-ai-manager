@@ -2,10 +2,12 @@
 (function () {
     'use strict';
 
-    var messages  = document.getElementById('wam-messages');
-    var input     = document.getElementById('wam-input');
-    var sendBtn   = document.getElementById('wam-send');
-    var quickBtns = document.querySelectorAll('.wam-quick-btn');
+    var messages   = document.getElementById('wam-messages');
+    var input      = document.getElementById('wam-input');
+    var sendBtn    = document.getElementById('wam-send');
+    var quickBtns  = document.querySelectorAll('.wam-quick-btn');
+    var creditsEl  = document.getElementById('wam-credits-display');
+    var settingsUrl = (wamData.adminUrl || '') + 'admin.php?page=wam-settings';
 
     if (!messages || !input || !sendBtn) return;
 
@@ -38,7 +40,7 @@
     function sendMessage(text) {
         appendMessage('user', text);
 
-        var thinking = appendMessage('thinking', 'Thinking…');
+        var thinking = appendThinking();
         setLoading(true);
 
         var data = new FormData();
@@ -54,21 +56,65 @@
         .then(function (res) { return res.json(); })
         .then(function (json) {
             thinking.remove();
+
             if (json.success) {
                 appendMessage('assistant', json.data.reply);
                 updateCredits(json.data.credits_remaining);
             } else {
-                var errMsg = (json.data && json.data.message) ? json.data.message : 'Something went wrong.';
-                appendMessage('error', errMsg);
+                var msg = json.data && json.data.message ? json.data.message : 'Something went wrong.';
+                handleError(msg);
             }
         })
         .catch(function () {
             thinking.remove();
-            appendMessage('error', 'Network error — please try again.');
+            appendMessage('error', 'Network error — could not reach the server. Check your connection and try again.');
         })
         .finally(function () {
             setLoading(false);
         });
+    }
+
+    // ── Error handler ─────────────────────────────────────────────────
+    function handleError(msg) {
+        var isSessionError = msg.toLowerCase().indexOf('session') !== -1 ||
+                             msg.toLowerCase().indexOf('reconnect') !== -1 ||
+                             msg.toLowerCase().indexOf('sign in') !== -1;
+
+        var isCreditsError = msg.toLowerCase().indexOf('queries') !== -1 ||
+                             msg.toLowerCase().indexOf('upgrade') !== -1 ||
+                             msg.toLowerCase().indexOf('credits') !== -1;
+
+        if (isSessionError) {
+            var el = appendMessage('error',
+                msg + ' Go to Settings to reconnect.');
+            var link = document.createElement('a');
+            link.href = settingsUrl;
+            link.textContent = ' Go to Settings →';
+            link.style.display = 'block';
+            link.style.marginTop = '6px';
+            el.appendChild(link);
+            // Disable input — session is gone, further messages will all fail
+            input.disabled  = true;
+            sendBtn.disabled = true;
+            quickBtns.forEach(function (b) { b.disabled = true; });
+
+        } else if (isCreditsError) {
+            var el2 = appendMessage('error', msg);
+            var link2 = document.createElement('a');
+            link2.href = wamData.upgradeUrl || settingsUrl;
+            link2.textContent = ' Upgrade now →';
+            link2.style.display = 'block';
+            link2.style.marginTop = '6px';
+            link2.target = '_blank';
+            el2.appendChild(link2);
+            // Disable input — no credits left
+            input.disabled   = true;
+            sendBtn.disabled  = true;
+            quickBtns.forEach(function (b) { b.disabled = true; });
+
+        } else {
+            appendMessage('error', msg);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────
@@ -81,6 +127,15 @@
         return el;
     }
 
+    function appendThinking() {
+        var el = document.createElement('div');
+        el.className = 'wam-msg thinking';
+        el.innerHTML = '<span class="wam-dots"><span></span><span></span><span></span></span>';
+        messages.appendChild(el);
+        messages.scrollTop = messages.scrollHeight;
+        return el;
+    }
+
     function setLoading(on) {
         sendBtn.disabled = on;
         input.disabled   = on;
@@ -88,10 +143,12 @@
     }
 
     function updateCredits(n) {
-        var el = document.getElementById('wam-credits');
-        if (el && typeof n === 'number') {
-            el.textContent = n + ' queries left';
-            el.style.color = n <= 5 ? '#cc1818' : '#666';
+        if (!creditsEl || typeof n !== 'number') return;
+        creditsEl.textContent = n + ' queries left';
+        creditsEl.className   = n <= 10 ? 'wam-credits-low' : '';
+        if (n === 0) {
+            // Reload to show the upgrade card
+            window.location.reload();
         }
     }
 }());
