@@ -43,35 +43,69 @@
         var thinking = appendThinking();
         setLoading(true);
 
-        var data = new FormData();
-        data.append('action',  'wam_chat');
-        data.append('nonce',   wamData.nonce);
-        data.append('message', text);
+        if (wamData.storeConnected && wamData.backendUrl && wamData.sessionToken) {
+            // Direct mode: JS → backend → WC REST API (no WordPress AJAX in the loop)
+            // This avoids the deadlock where WordPress waits for the backend which
+            // waits for WordPress to handle a WC REST API call.
+            fetch(wamData.backendUrl + '/api/plugin/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email:   wamData.merchantEmail,
+                    token:   wamData.sessionToken,
+                    message: text,
+                }),
+            })
+            .then(function (res) {
+                return res.json().then(function (json) {
+                    return { status: res.status, body: json };
+                });
+            })
+            .then(function (r) {
+                thinking.remove();
+                if (r.status === 200) {
+                    appendMessage('assistant', r.body.reply || '');
+                    updateCredits(r.body.credits_remaining);
+                } else {
+                    var msg = r.body.detail || 'Something went wrong.';
+                    handleError(msg);
+                }
+            })
+            .catch(function () {
+                thinking.remove();
+                appendMessage('error', 'Network error — could not reach the server.');
+            })
+            .finally(function () { setLoading(false); });
 
-        fetch(wamData.ajaxUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            body: data,
-        })
-        .then(function (res) { return res.json(); })
-        .then(function (json) {
-            thinking.remove();
+        } else {
+            // Fallback: WordPress AJAX → backend (static snapshot mode)
+            var data = new FormData();
+            data.append('action',  'wam_chat');
+            data.append('nonce',   wamData.nonce);
+            data.append('message', text);
 
-            if (json.success) {
-                appendMessage('assistant', json.data.reply);
-                updateCredits(json.data.credits_remaining);
-            } else {
-                var msg = json.data && json.data.message ? json.data.message : 'Something went wrong.';
-                handleError(msg);
-            }
-        })
-        .catch(function () {
-            thinking.remove();
-            appendMessage('error', 'Network error — could not reach the server. Check your connection and try again.');
-        })
-        .finally(function () {
-            setLoading(false);
-        });
+            fetch(wamData.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: data,
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (json) {
+                thinking.remove();
+                if (json.success) {
+                    appendMessage('assistant', json.data.reply);
+                    updateCredits(json.data.credits_remaining);
+                } else {
+                    var msg = json.data && json.data.message ? json.data.message : 'Something went wrong.';
+                    handleError(msg);
+                }
+            })
+            .catch(function () {
+                thinking.remove();
+                appendMessage('error', 'Network error — could not reach the server. Check your connection and try again.');
+            })
+            .finally(function () { setLoading(false); });
+        }
     }
 
     // ── Error handler ─────────────────────────────────────────────────

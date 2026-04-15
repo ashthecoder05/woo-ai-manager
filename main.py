@@ -23,6 +23,7 @@ from services.db import (
     get_recent_orders, get_merchant_analytics, get_order,
     mark_merchant_verified, check_and_increment_chat, get_wc_webhook_secret,
     check_and_decrement_plugin_credits, get_plugin_credits,
+    save_wc_credentials, get_wc_credentials,
 )
 from webhook.handler import router as webhook_router
 from telegram_bot.bot import start_bot, stop_bot, is_running as tg_is_running, get_running_bots
@@ -695,12 +696,65 @@ async def plugin_signin(req: PluginSignInRequest, request: Request):
     }
 
 
+class WCRegisterRequest(BaseModel):
+    email: str
+    token: str
+    store_url: str
+    consumer_key: str
+    consumer_secret: str
+
+    @field_validator("store_url")
+    @classmethod
+    def validate_store_url(cls, v):
+        v = v.strip().rstrip("/")
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("store_url must start with http:// or https://")
+        return v
+
+    @field_validator("consumer_key", "consumer_secret")
+    @classmethod
+    def not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("credential must not be empty")
+        return v.strip()
+
+
+@app.post("/api/plugin/register")
+async def plugin_register(req: WCRegisterRequest, request: Request):
+    """
+    Register a merchant's WooCommerce store credentials.
+
+    We do NOT call the WC REST API here — doing so would deadlock: the WordPress
+    server is waiting for our response while we're waiting for it to answer our
+    validation request. Instead we validate key format and test credentials on
+    the first chat query, returning a clear error then if they're wrong.
+    """
+    ip = _client_ip(request)
+    if not _check_rate(ip, max_requests=10, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many requests.")
+
+    email = req.email.strip().lower()
+    if not _verify_session_token(email, req.token):
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    # Sanity-check key format (WC keys always start with ck_ / cs_)
+    if not req.consumer_key.startswith("ck_"):
+        raise HTTPException(status_code=400, detail="Consumer Key should start with 'ck_'. Copy it directly from WooCommerce → REST API.")
+    if not req.consumer_secret.startswith("cs_"):
+        raise HTTPException(status_code=400, detail="Consumer Secret should start with 'cs_'. Copy it directly from WooCommerce → REST API.")
+
+    save_wc_credentials(email, req.store_url, req.consumer_key, req.consumer_secret)
+    logger.info("WC credentials saved | email=%s store=%s", email, req.store_url)
+
+    return {"status": "ok", "message": "Store connected. Live data mode is now active.", "store_url": req.store_url}
+
+
 @app.post("/api/plugin/chat")
 async def plugin_chat(req: PluginChatRequest, request: Request):
     """
     Chat endpoint for the WP plugin.
-    Verifies the session token, deducts a credit, calls Azure OpenAI,
-    and returns the reply along with the remaining credit balance.
+    If WC credentials are registered, uses live tool-calling (MCP-style).
+    Falls back to static snapshot otherwise.
     """
     ip = _client_ip(request)
     if not _check_rate(ip, max_requests=20, window_seconds=60):
@@ -718,25 +772,34 @@ async def plugin_chat(req: PluginChatRequest, request: Request):
             detail="You've used all 50 free queries. Upgrade to continue.",
         )
 
-    # Build a store-manager system prompt with the injected WC context
-    store_name    = get_merchant(email) or {}
-    system_prompt = _build_plugin_system_prompt(req.store_context or "")
-
     try:
-        from agent.core import client as az_client
-        from config import AZURE_OPENAI_DEPLOYMENT
-        response = az_client.chat.completions.create(
-            model=AZURE_OPENAI_DEPLOYMENT,
-            max_tokens=512,
-            temperature=0.3,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": req.message},
-            ],
-        )
-        reply = response.choices[0].message.content or ""
+        wc_creds = get_wc_credentials(email)
+        if wc_creds:
+            # MCP mode: AI calls WC REST API tools dynamically
+            from agent.core import plugin_chat_with_wc_tools
+            reply = plugin_chat_with_wc_tools(
+                message=req.message,
+                store_url=wc_creds["store_url"],
+                consumer_key=wc_creds["consumer_key"],
+                consumer_secret=wc_creds["consumer_secret"],
+            )
+        else:
+            # Fallback: static snapshot injected into system prompt
+            from agent.core import client as az_client
+            from config import AZURE_OPENAI_DEPLOYMENT
+            system_prompt = _build_plugin_system_prompt(req.store_context or "")
+            response = az_client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT,
+                max_tokens=512,
+                temperature=0.3,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": req.message},
+                ],
+            )
+            reply = response.choices[0].message.content or ""
     except Exception as e:
-        logger.error("Plugin chat Azure error: %s", e)
+        logger.error("Plugin chat error: %s", e)
         err = str(e).lower()
         if "token" in err or "length" in err or "maximum" in err:
             detail = "Your question is too long. Please try asking something shorter."

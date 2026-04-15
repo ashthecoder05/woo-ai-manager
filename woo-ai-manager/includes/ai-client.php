@@ -32,7 +32,7 @@ function wam_chat( string $user_message, string $store_context = '' ) {
     }
 
     $response = wp_remote_post( $backend . '/api/plugin/chat', [
-        'timeout'     => 30,
+        'timeout'     => 90,
         'headers'     => [ 'Content-Type' => 'application/json' ],
         'body'        => wp_json_encode( [
             'email'         => $email,
@@ -73,6 +73,62 @@ function wam_chat( string $user_message, string $store_context = '' ) {
         'reply'             => $data['reply'] ?? '',
         'credits_remaining' => $data['credits_remaining'] ?? 0,
     ];
+}
+
+/**
+ * Register the merchant's WC store with the backend.
+ *
+ * Sends the store URL + WC REST API consumer key/secret.
+ * The backend validates them against the live store before saving.
+ *
+ * @param string $consumer_key    WC REST API consumer key.
+ * @param string $consumer_secret WC REST API consumer secret.
+ * @return array|WP_Error  Array with 'status' and 'message' on success.
+ */
+function wam_register_store( string $consumer_key, string $consumer_secret ) {
+    $email   = get_option( 'wam_merchant_email', '' );
+    $token   = get_option( 'wam_session_token', '' );
+    $backend = rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' );
+
+    if ( ! $email || ! $token ) {
+        return new WP_Error( 'wam_not_connected', 'Not connected. Sign in first.' );
+    }
+
+    $response = wp_remote_post( $backend . '/api/plugin/register', [
+        'timeout' => 20,
+        'headers' => [ 'Content-Type' => 'application/json' ],
+        'body'    => wp_json_encode( [
+            'email'           => $email,
+            'token'           => $token,
+            'store_url'       => get_site_url(),
+            'consumer_key'    => $consumer_key,
+            'consumer_secret' => $consumer_secret,
+        ] ),
+    ] );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    $code = wp_remote_retrieve_response_code( $response );
+    $data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+    if ( $code === 400 ) {
+        return new WP_Error( 'wam_invalid_credentials', $data['detail'] ?? 'Invalid credentials.' );
+    }
+    if ( $code === 401 ) {
+        delete_option( 'wam_session_token' );
+        return new WP_Error( 'wam_session_expired', 'Session expired. Please reconnect in Settings.' );
+    }
+    if ( $code !== 200 ) {
+        return new WP_Error( 'wam_register_failed', $data['detail'] ?? 'Registration failed (HTTP ' . $code . ').' );
+    }
+
+    // Mark store as connected so the UI reflects it
+    update_option( 'wam_store_connected', 1 );
+    update_option( 'wam_store_url', get_site_url() );
+
+    return $data;
 }
 
 /**

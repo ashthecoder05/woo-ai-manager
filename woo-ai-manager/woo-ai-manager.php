@@ -49,8 +49,9 @@ function wam_init() {
     add_action( 'wp_dashboard_setup', 'wam_register_dashboard_widget' );
 
     // AJAX handlers
-    add_action( 'wp_ajax_wam_chat',          'wam_ajax_chat' );
-    add_action( 'wp_ajax_wam_google_signin', 'wam_ajax_google_signin' );
+    add_action( 'wp_ajax_wam_chat',           'wam_ajax_chat' );
+    add_action( 'wp_ajax_wam_google_signin',  'wam_ajax_google_signin' );
+    add_action( 'wp_ajax_wam_register_store', 'wam_ajax_register_store' );
 }
 
 // ── Menus ─────────────────────────────────────────────────────────────────────
@@ -101,11 +102,16 @@ function wam_enqueue_assets( $hook ) {
 
     // Pass data to JS
     wp_localize_script( 'wam-chat', 'wamData', [
-        'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
-        'adminUrl'   => admin_url(),
-        'nonce'      => wp_create_nonce( 'wam_chat' ),
-        'upgradeUrl' => WAM_UPGRADE_URL,
-        'version'    => WAM_VERSION,
+        'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+        'adminUrl'       => admin_url(),
+        'nonce'          => wp_create_nonce( 'wam_chat' ),
+        'upgradeUrl'     => WAM_UPGRADE_URL,
+        'version'        => WAM_VERSION,
+        // Direct-to-backend mode (used when WC credentials are registered)
+        'backendUrl'     => rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' ),
+        'merchantEmail'  => get_option( 'wam_merchant_email', '' ),
+        'sessionToken'   => get_option( 'wam_session_token', '' ),
+        'storeConnected' => (bool) get_option( 'wam_store_connected', false ),
     ] );
 }
 
@@ -126,6 +132,30 @@ function wam_ajax_google_signin() {
 
     if ( is_wp_error( $result ) ) {
         wp_send_json_error( [ 'message' => $result->get_error_message() ], 401 );
+    }
+
+    wp_send_json_success( $result );
+}
+
+// ── AJAX: register store ──────────────────────────────────────────────────────
+function wam_ajax_register_store() {
+    check_ajax_referer( 'wam_register_store', 'nonce' );
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( [ 'message' => 'Unauthorised.' ], 403 );
+    }
+
+    $consumer_key    = isset( $_POST['consumer_key'] )    ? sanitize_text_field( wp_unslash( $_POST['consumer_key'] ) )    : '';
+    $consumer_secret = isset( $_POST['consumer_secret'] ) ? sanitize_text_field( wp_unslash( $_POST['consumer_secret'] ) ) : '';
+
+    if ( ! $consumer_key || ! $consumer_secret ) {
+        wp_send_json_error( [ 'message' => 'Both Consumer Key and Consumer Secret are required.' ], 400 );
+    }
+
+    $result = wam_register_store( $consumer_key, $consumer_secret );
+
+    if ( is_wp_error( $result ) ) {
+        wp_send_json_error( [ 'message' => $result->get_error_message() ], 400 );
     }
 
     wp_send_json_success( $result );

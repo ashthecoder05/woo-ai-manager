@@ -26,12 +26,13 @@ function wam_render_settings_page() {
         add_settings_error( 'wam_settings', 'disconnected', 'Signed out successfully.', 'updated' );
     }
 
-    $email        = get_option( 'wam_merchant_email', '' );
-    $name         = get_option( 'wam_merchant_name', '' );
-    $token        = get_option( 'wam_session_token', '' );
-    $credits      = (int) get_option( 'wam_credits_remaining', 0 );
-    $backend_url  = WAM_DEFAULT_BACKEND;
-    $is_connected = $email && $token;
+    $email           = get_option( 'wam_merchant_email', '' );
+    $name            = get_option( 'wam_merchant_name', '' );
+    $token           = get_option( 'wam_session_token', '' );
+    $credits         = (int) get_option( 'wam_credits_remaining', 0 );
+    $backend_url     = WAM_DEFAULT_BACKEND;
+    $is_connected    = $email && $token;
+    $store_connected = (bool) get_option( 'wam_store_connected', false );
 
     // Fetch Google Client ID from the backend (cached for 1 hour)
     $google_client_id = get_transient( 'wam_google_client_id' );
@@ -96,6 +97,119 @@ function wam_render_settings_page() {
                 <?php wp_nonce_field( 'wam_disconnect' ); ?>
                 <button type="submit" name="wam_disconnect" class="button">Sign out</button>
             </form>
+
+            <!-- ── Step 2: Connect store ─────────────────────────────── -->
+            <div style="margin-top:28px;">
+                <h2 style="margin-bottom:4px;">
+                    <?php if ( $store_connected ) : ?>
+                        <span style="color:#7ad03a;">&#10003;</span> Store connected — Live data mode active
+                    <?php else : ?>
+                        Step 2: Connect your store <span style="font-size:13px;font-weight:normal;color:#666;">(optional — unlocks smarter answers)</span>
+                    <?php endif; ?>
+                </h2>
+
+                <?php if ( $store_connected ) : ?>
+                    <p style="color:#555;font-size:13px;margin-top:0;">
+                        The AI can now call your store's live data directly. No static snapshot needed.
+                        <a href="#wam-reconnect" id="wam-reconnect-link" style="margin-left:8px;font-size:12px;">Reconnect with new keys</a>
+                    </p>
+                    <div id="wam-reconnect" style="display:none;margin-top:12px;">
+                <?php else : ?>
+                    <p style="color:#555;font-size:13px;margin-top:0;">
+                        Give the AI direct access to your store's live data — orders, revenue, products, customers.
+                        It will be able to answer complex questions and even take actions like creating coupons.
+                    </p>
+                    <div id="wam-reconnect">
+                <?php endif; ?>
+
+                    <ol style="font-size:13px;color:#444;line-height:1.8;margin-bottom:16px;">
+                        <li>Go to <strong>WooCommerce → Settings → Advanced → REST API</strong></li>
+                        <li>Click <strong>Add key</strong></li>
+                        <li>Set Description to <em>AI Manager</em>, User to your admin, Permissions to <strong>Read/Write</strong></li>
+                        <li>Click <strong>Generate API key</strong> and copy both keys below</li>
+                    </ol>
+
+                    <table class="form-table" style="max-width:560px;">
+                        <tr>
+                            <th style="width:140px;"><label for="wam-ck">Consumer Key</label></th>
+                            <td><input type="password" id="wam-ck" class="regular-text" placeholder="ck_…" autocomplete="off"></td>
+                        </tr>
+                        <tr>
+                            <th><label for="wam-cs">Consumer Secret</label></th>
+                            <td><input type="password" id="wam-cs" class="regular-text" placeholder="cs_…" autocomplete="off"></td>
+                        </tr>
+                    </table>
+
+                    <p>
+                        <button type="button" id="wam-register-btn" class="button button-primary">Connect store</button>
+                        <span id="wam-register-loading" style="display:none;margin-left:10px;color:#666;">Connecting…</span>
+                    </p>
+                    <p id="wam-register-error"  style="color:#cc1818;display:none;"></p>
+                    <p id="wam-register-success" style="color:#3a7a1a;display:none;"></p>
+                </div>
+            </div>
+
+            <script>
+            (function () {
+                var AJAX_URL = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+                var NONCE    = <?php echo wp_json_encode( wp_create_nonce( 'wam_register_store' ) ); ?>;
+
+                var reconnectLink = document.getElementById('wam-reconnect-link');
+                if (reconnectLink) {
+                    reconnectLink.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        document.getElementById('wam-reconnect').style.display = 'block';
+                        reconnectLink.style.display = 'none';
+                    });
+                }
+
+                document.getElementById('wam-register-btn').addEventListener('click', function () {
+                    var ck = document.getElementById('wam-ck').value.trim();
+                    var cs = document.getElementById('wam-cs').value.trim();
+
+                    document.getElementById('wam-register-error').style.display   = 'none';
+                    document.getElementById('wam-register-success').style.display = 'none';
+
+                    if (!ck || !cs) {
+                        document.getElementById('wam-register-error').textContent   = 'Both keys are required.';
+                        document.getElementById('wam-register-error').style.display = 'block';
+                        return;
+                    }
+
+                    document.getElementById('wam-register-btn').disabled            = true;
+                    document.getElementById('wam-register-loading').style.display   = 'inline';
+
+                    var form = new FormData();
+                    form.append('action',          'wam_register_store');
+                    form.append('nonce',           NONCE);
+                    form.append('consumer_key',    ck);
+                    form.append('consumer_secret', cs);
+
+                    fetch(AJAX_URL, { method: 'POST', credentials: 'same-origin', body: form })
+                        .then(function (r) { return r.json(); })
+                        .then(function (json) {
+                            document.getElementById('wam-register-btn').disabled          = false;
+                            document.getElementById('wam-register-loading').style.display = 'none';
+                            if (json.success) {
+                                document.getElementById('wam-register-success').textContent   = 'Store connected! The AI now has live access to your data.';
+                                document.getElementById('wam-register-success').style.display = 'block';
+                                // Reload after 1.5s to show the connected state
+                                setTimeout(function () { window.location.reload(); }, 1500);
+                            } else {
+                                var msg = json.data && json.data.message ? json.data.message : 'Connection failed. Check your keys and try again.';
+                                document.getElementById('wam-register-error').textContent   = msg;
+                                document.getElementById('wam-register-error').style.display = 'block';
+                            }
+                        })
+                        .catch(function () {
+                            document.getElementById('wam-register-btn').disabled          = false;
+                            document.getElementById('wam-register-loading').style.display = 'none';
+                            document.getElementById('wam-register-error').textContent     = 'Could not reach the server. Check your connection.';
+                            document.getElementById('wam-register-error').style.display   = 'block';
+                        });
+                });
+            }());
+            </script>
 
         <?php elseif ( $google_client_id ) : ?>
 

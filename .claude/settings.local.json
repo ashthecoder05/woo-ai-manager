@@ -91,7 +91,21 @@
       "WebFetch(domain:qualimero.com)",
       "WebFetch(domain:www.infocaptor.com)",
       "WebFetch(domain:alhena.ai)",
-      "WebFetch(domain:woocommerce.com)"
+      "WebFetch(domain:woocommerce.com)",
+      "Bash(cat /Users/aishwaryaadyanthaya/Aishwarya/AgentHackathon/mcp_server/*.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{time_total}s\" http://localhost:8080/wp-json/wc/v3/system_status)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/wp-json/)",
+      "Bash(curl -sv http://localhost:8080/wp-json/wc/v3/system_status)",
+      "Bash(curl -sL -w \"\\\\nHTTP %{http_code}\" http://localhost:8080/wp-json/wc/v3/system_status/)",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -si \"http://localhost:8080/index.php?rest_route=/wc/v3/orders&per_page=1\" -u \"ck_test:cs_test\")",
+      "Bash(lsof -i:8080)",
+      "Bash(curl -sv 'http://localhost:8080/index.php?rest_route=/wc/v3/orders&per_page=1' -u ck_168843b238acc1d26ed5bc2da60b53c8934fb54b:cs_6fbaf2ef774b63cf7a45abdbeef98157b80a17ec)",
+      "Bash(cat)",
+      "Bash(php -S localhost:8099 /tmp/test_auth.php)",
+      "Bash(curl -s \"http://localhost:8099/?rest_route=/test\" -u \"ck_abc:cs_xyz\")",
+      "Bash(kill %1)",
+      "Bash(php -S localhost:8080 -t .)"
     ]
   }
 }

@@ -188,6 +188,17 @@ def init_db() -> None:
             )
         """)
         _execute(conn, f"""
+            CREATE TABLE IF NOT EXISTS merchant_wc_credentials (
+                id               {pk},
+                merchant_email   TEXT    NOT NULL UNIQUE,
+                store_url        TEXT    NOT NULL,
+                consumer_key     TEXT    NOT NULL,
+                consumer_secret  TEXT    NOT NULL,
+                created_at       TEXT    NOT NULL,
+                updated_at       TEXT    NOT NULL
+            )
+        """)
+        _execute(conn, f"""
             CREATE TABLE IF NOT EXISTS orders (
                 id                {pk},
                 order_id          TEXT    NOT NULL UNIQUE,
@@ -207,6 +218,42 @@ def init_db() -> None:
             )
         """)
         conn.commit()
+
+
+# ── WC Credentials ────────────────────────────────────────────────────────────
+
+def save_wc_credentials(email: str, store_url: str, consumer_key: str, consumer_secret: str) -> None:
+    """Upsert WooCommerce REST API credentials for a merchant."""
+    init_db()
+    ph = _ph()
+    now = datetime.now(tz=timezone.utc).isoformat()
+    with _connect() as conn:
+        existing = _fetchone(conn,
+            f"SELECT id FROM merchant_wc_credentials WHERE merchant_email = {ph}",
+            (email.lower(),))
+        if existing:
+            _execute(conn, f"""
+                UPDATE merchant_wc_credentials
+                SET store_url = {ph}, consumer_key = {ph}, consumer_secret = {ph}, updated_at = {ph}
+                WHERE merchant_email = {ph}
+            """, (store_url, consumer_key, consumer_secret, now, email.lower()))
+        else:
+            _execute(conn, f"""
+                INSERT INTO merchant_wc_credentials
+                    (merchant_email, store_url, consumer_key, consumer_secret, created_at, updated_at)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            """, (email.lower(), store_url, consumer_key, consumer_secret, now, now))
+        conn.commit()
+
+
+def get_wc_credentials(email: str) -> dict | None:
+    """Return stored WC credentials for a merchant, or None if not registered."""
+    init_db()
+    ph = _ph()
+    with _connect() as conn:
+        return _fetchone(conn,
+            f"SELECT store_url, consumer_key, consumer_secret FROM merchant_wc_credentials WHERE merchant_email = {ph}",
+            (email.lower(),))
 
 
 # ── Merchants ──────────────────────────────────────────────────────────────────
