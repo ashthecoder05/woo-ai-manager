@@ -43,12 +43,15 @@
         var thinking = appendThinking();
         setLoading(true);
 
-        if (wamData.storeConnected && wamData.backendUrl && wamData.sessionToken) {
-            // Streaming mode: JS → backend SSE → WC REST API (no WordPress in the loop)
-            // Events arrive as tool_start / tool_done / reply — we render each live.
-            var stepsEl   = null;
+        if (wamData.storeConnected && wamData.backendUrl) {
+            // Streaming mode — two-step secure flow:
+            //   Step 1: Ask WordPress for a disposable stream token (nonce-protected AJAX).
+            //           PHP holds the real session token; we never see it.
+            //   Step 2: Connect directly to the backend SSE stream using that token.
+            //           The token is 30s TTL and burns after this one connection.
+            var stepsEl    = null;
             var thinkingEl = thinking;
-            var settled   = false;
+            var settled    = false;
 
             function ensureSteps() {
                 if (!stepsEl) {
@@ -102,46 +105,70 @@
                 }
             }
 
-            fetch(wamData.backendUrl + '/api/plugin/chat/stream', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email:   wamData.merchantEmail,
-                    token:   wamData.sessionToken,
-                    message: text,
-                }),
-            })
-            .then(function (res) {
-                if (!res.ok) {
-                    return res.json().then(function (body) {
-                        throw new Error(body.detail || 'HTTP ' + res.status);
-                    });
-                }
-                var reader  = res.body.getReader();
-                var decoder = new TextDecoder();
-                var buf     = '';
+            // Step 1 — exchange message for a disposable stream token via WordPress AJAX
+            var tokenForm = new FormData();
+            tokenForm.append('action',  'wam_stream_token');
+            tokenForm.append('nonce',   wamData.nonce);
+            tokenForm.append('message', text);
 
-                function pump() {
-                    return reader.read().then(function (chunk) {
-                        if (chunk.done) return;
-                        buf += decoder.decode(chunk.value, { stream: true });
-                        var lines = buf.split('\n');
-                        buf = lines.pop(); // keep incomplete line
-                        lines.forEach(function (line) {
-                            if (!line.startsWith('data: ')) return;
-                            try { handleStreamEvent(JSON.parse(line.slice(6))); } catch (_) {}
-                        });
-                        return pump();
-                    });
-                }
-                return pump();
+            fetch(wamData.ajaxUrl, {
+                method:      'POST',
+                credentials: 'same-origin',
+                body:        tokenForm,
             })
-            .catch(function (err) {
-                if (!settled) {
+            .then(function (res) { return res.json(); })
+            .then(function (json) {
+                if (!json.success) {
                     thinkingEl.remove();
-                    handleError(err.message || 'Network error — could not reach the server.');
+                    var msg = json.data && json.data.message ? json.data.message : 'Something went wrong.';
+                    handleError(msg);
                     setLoading(false);
+                    return;
                 }
+
+                // Step 2 — connect to the backend stream with the disposable token
+                fetch(json.data.stream_url, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ stream_token: json.data.stream_token }),
+                })
+                .then(function (res) {
+                    if (!res.ok) {
+                        return res.json().then(function (body) {
+                            throw new Error(body.detail || 'HTTP ' + res.status);
+                        });
+                    }
+                    var reader  = res.body.getReader();
+                    var decoder = new TextDecoder();
+                    var buf     = '';
+
+                    function pump() {
+                        return reader.read().then(function (chunk) {
+                            if (chunk.done) return;
+                            buf += decoder.decode(chunk.value, { stream: true });
+                            var lines = buf.split('\n');
+                            buf = lines.pop();
+                            lines.forEach(function (line) {
+                                if (!line.startsWith('data: ')) return;
+                                try { handleStreamEvent(JSON.parse(line.slice(6))); } catch (_) {}
+                            });
+                            return pump();
+                        });
+                    }
+                    return pump();
+                })
+                .catch(function (err) {
+                    if (!settled) {
+                        if (!stepsEl) thinkingEl.remove();
+                        handleError(err.message || 'Network error — could not reach the server.');
+                        setLoading(false);
+                    }
+                });
+            })
+            .catch(function () {
+                thinkingEl.remove();
+                handleError('Network error — could not reach WordPress.');
+                setLoading(false);
             });
 
         } else {

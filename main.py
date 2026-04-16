@@ -188,6 +188,48 @@ def _verify_session_token(email: str, token: str) -> bool:
 _csrf_tokens: dict[str, tuple[str, float]] = {}
 _CSRF_TTL = 3600  # 1 hour
 
+# ── Disposable stream tokens ──────────────────────────────────────────────────
+# Short-lived (30s), single-use tokens the browser gets INSTEAD of the real
+# session token. The session token never leaves the PHP process.
+_stream_tokens: dict[str, dict] = {}
+_STREAM_TOKEN_TTL = 35  # stored for 35s — 5s grace over the 30s JS window
+
+def _issue_stream_token(email: str, message: str) -> str:
+    """Issue a single-use disposable token scoped to one message."""
+    import secrets as _sec
+    token   = _sec.token_urlsafe(32)
+    expires = time.time() + _STREAM_TOKEN_TTL
+    payload = json.dumps({"email": email, "message": message, "expires": expires})
+    if _redis:
+        try:
+            _redis.setex(f"st:{token}", _STREAM_TOKEN_TTL, payload)
+            return token
+        except Exception:
+            pass
+    _stream_tokens[token] = {"email": email, "message": message, "expires": expires}
+    # Prune stale entries on every write to bound memory usage
+    now = time.time()
+    for k in [k for k, v in _stream_tokens.items() if v["expires"] < now]:
+        del _stream_tokens[k]
+    return token
+
+
+def _consume_stream_token(token: str) -> dict | None:
+    """Atomically validate and burn a stream token. Returns {email, message} or None."""
+    if _redis:
+        try:
+            raw = _redis.getdel(f"st:{token}")
+            if not raw:
+                return None
+            data = json.loads(raw)
+            return data if time.time() <= data["expires"] else None
+        except Exception:
+            pass
+    entry = _stream_tokens.pop(token, None)
+    if not entry:
+        return None
+    return entry if time.time() <= entry["expires"] else None
+
 def _issue_csrf_token(email: str) -> str:
     """Issue a time-limited CSRF token tied to a merchant email."""
     import secrets as _secrets
@@ -749,6 +791,52 @@ async def plugin_register(req: WCRegisterRequest, request: Request):
     return {"status": "ok", "message": "Store connected. Live data mode is now active.", "store_url": req.store_url}
 
 
+class StreamTokenRequest(BaseModel):
+    email: str
+    token: str   # the long-lived session token — arrives from PHP, never from a browser
+    message: str
+
+    @field_validator("message")
+    @classmethod
+    def message_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("message must not be empty")
+        if len(v) > 2000:
+            raise ValueError("message too long")
+        return v.strip()
+
+
+@app.post("/api/plugin/stream-token")
+async def plugin_stream_token(req: StreamTokenRequest, request: Request):
+    """
+    Exchange a long-lived session token for a single-use, short-lived stream token.
+    Called server-to-server by the WordPress plugin — the browser never calls this.
+    Returns a stream_token valid for 30 s that the browser uses to connect to /chat/stream.
+    """
+    ip = _client_ip(request)
+    if not _check_rate(ip, max_requests=20, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many requests.")
+
+    email = req.email.strip().lower()
+    if not _verify_session_token(email, req.token):
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    allowed, credits_left = check_and_decrement_plugin_credits(email)
+    if not allowed:
+        raise HTTPException(status_code=402, detail="You've used all 50 free queries. Upgrade to continue.")
+
+    if not get_wc_credentials(email):
+        raise HTTPException(status_code=400, detail="Store not connected. Register WC credentials first.")
+
+    stream_token = _issue_stream_token(email, req.message)
+    security_logger.info("Stream token issued | ip=%s email=%s", ip, email)
+    return {
+        "stream_token":      stream_token,
+        "credits_remaining": credits_left,
+        "expires_in":        30,
+    }
+
+
 @app.post("/api/plugin/chat")
 async def plugin_chat(req: PluginChatRequest, request: Request):
     """
@@ -847,12 +935,43 @@ If a section is absent from the snapshot (e.g. no low-stock products listed), it
 """
 
 
+@app.options("/api/plugin/chat/stream")
+async def plugin_chat_stream_preflight():
+    """Handle CORS preflight for the cross-origin stream endpoint."""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin":  "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Max-Age":       "86400",
+        },
+    )
+
+
+class StreamChatRequest(BaseModel):
+    stream_token: str
+
+    @field_validator("stream_token")
+    @classmethod
+    def not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("stream_token must not be empty")
+        return v.strip()
+
+
 @app.post("/api/plugin/chat/stream")
-async def plugin_chat_stream(req: PluginChatRequest, request: Request):
+async def plugin_chat_stream(req: StreamChatRequest, request: Request):
     """
-    Streaming SSE version of the plugin chat endpoint.
-    Emits tool_start / tool_done events in real time so the UI can show
-    which WC data sources are being queried as the AI thinks.
+    Streaming SSE chat endpoint — authenticated via a disposable stream token.
+
+    The browser never holds the real session token. Flow:
+      1. Browser → WordPress AJAX (nonce-protected) → PHP → /api/plugin/stream-token
+         (PHP sends the real session token server-to-server; gets back a stream_token)
+      2. Browser → POST /api/plugin/chat/stream  {stream_token}
+         (stream_token is 30s TTL, single-use — burned on first connection)
+
+    Emits SSE events: tool_start / tool_done / reply / error
     """
     import asyncio
     import concurrent.futures
@@ -861,49 +980,48 @@ async def plugin_chat_stream(req: PluginChatRequest, request: Request):
     if not _check_rate(ip, max_requests=20, window_seconds=60):
         raise HTTPException(status_code=429, detail="Too many requests.")
 
-    email = req.email.strip().lower()
+    token_data = _consume_stream_token(req.stream_token)
+    if not token_data:
+        security_logger.warning("Invalid/expired stream token | ip=%s", ip)
+        raise HTTPException(status_code=401, detail="Invalid or expired stream token. Please try again.")
 
-    if not _verify_session_token(email, req.token):
-        raise HTTPException(status_code=401, detail="Invalid or expired session.")
-
-    allowed, credits_left = check_and_decrement_plugin_credits(email)
-    if not allowed:
-        raise HTTPException(status_code=402, detail="You've used all 50 free queries. Upgrade to continue.")
+    email        = token_data["email"]
+    message      = token_data["message"]
+    credits_left = get_plugin_credits(email)  # credits already decremented at token issuance
 
     wc_creds = get_wc_credentials(email)
     if not wc_creds:
-        raise HTTPException(status_code=400, detail="Store not connected. Register WC credentials first.")
+        raise HTTPException(status_code=400, detail="Store not connected.")
 
-    loop = asyncio.get_running_loop()
+    loop  = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue()
 
     def emit(event: dict) -> None:
-        """Thread-safe: push an SSE event from the chat thread into the async queue."""
         loop.call_soon_threadsafe(queue.put_nowait, event)
 
     def run_chat() -> None:
         try:
             from agent.core import plugin_chat_with_wc_tools_streaming
             reply = plugin_chat_with_wc_tools_streaming(
-                message=req.message,
+                message=message,
                 store_url=wc_creds["store_url"],
                 consumer_key=wc_creds["consumer_key"],
                 consumer_secret=wc_creds["consumer_secret"],
                 emit=emit,
             )
             loop.call_soon_threadsafe(queue.put_nowait, {
-                "type": "reply",
-                "content": reply,
+                "type":              "reply",
+                "content":           reply,
                 "credits_remaining": credits_left,
             })
         except Exception as e:
             logger.error("plugin_chat_stream error: %s", e)
             loop.call_soon_threadsafe(queue.put_nowait, {"type": "error", "message": str(e)})
         finally:
-            loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel — stream done
+            loop.call_soon_threadsafe(queue.put_nowait, None)  # sentinel
 
     async def event_generator():
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        executor    = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         chat_future = loop.run_in_executor(executor, run_chat)
         try:
             while True:
@@ -925,9 +1043,13 @@ async def plugin_chat_stream(req: PluginChatRequest, request: Request):
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
+            "Cache-Control":       "no-cache",
+            "X-Accel-Buffering":   "no",
+            "Connection":          "keep-alive",
+            # Plugin streams cross-origin (browser → backend). Auth is the disposable
+            # token so allowing all origins here is safe. Set ALLOWED_ORIGINS env var
+            # for all other endpoints in production.
+            "Access-Control-Allow-Origin": "*",
         },
     )
 

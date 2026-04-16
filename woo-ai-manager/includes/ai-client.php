@@ -214,6 +214,69 @@ function wam_register_store( string $consumer_key, string $consumer_secret ) {
 }
 
 /**
+ * Exchange the long-lived session token for a single-use, short-lived
+ * stream token the browser can use to connect to /api/plugin/chat/stream.
+ *
+ * This is the core of the token security model:
+ *   - The real session token (24h TTL, reusable) stays in PHP. Never sent to the browser.
+ *   - The returned stream_token (30s TTL, single-use) is given to the browser.
+ *   - Even if the stream_token is extracted via XSS, it is already burned after one use.
+ *
+ * @param string $user_message  The chat message to be streamed.
+ * @return array{stream_token: string, credits_remaining: int, stream_url: string}|WP_Error
+ */
+function wam_get_stream_token( string $user_message ) {
+    $email   = get_option( 'wam_merchant_email', '' );
+    $token   = wam_decrypt_token( get_option( 'wam_session_token', '' ) );
+    $backend = rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' );
+
+    if ( ! $email || ! $token ) {
+        return new WP_Error(
+            'wam_not_connected',
+            'Not connected. Go to AI Manager → Settings and sign in.'
+        );
+    }
+
+    if ( ! wam_is_safe_backend_url( $backend ) ) {
+        return new WP_Error( 'wam_insecure_url', 'Backend URL must use HTTPS for non-local hosts.' );
+    }
+
+    $response = wp_remote_post( $backend . '/api/plugin/stream-token', [
+        'timeout' => 15,
+        'headers' => [ 'Content-Type' => 'application/json' ],
+        'body'    => wp_json_encode( [
+            'email'   => $email,
+            'token'   => $token,
+            'message' => $user_message,
+        ] ),
+    ] );
+
+    if ( is_wp_error( $response ) ) {
+        return $response;
+    }
+
+    $code = wp_remote_retrieve_response_code( $response );
+    $data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+    if ( $code === 401 ) {
+        delete_option( 'wam_session_token' );
+        return new WP_Error( 'wam_session_expired', 'Session expired. Please reconnect in Settings.' );
+    }
+    if ( $code === 402 ) {
+        return new WP_Error( 'wam_no_credits', $data['detail'] ?? 'No credits remaining.' );
+    }
+    if ( $code !== 200 ) {
+        return new WP_Error( 'wam_backend_error', $data['detail'] ?? 'Backend error (HTTP ' . $code . ').' );
+    }
+
+    return [
+        'stream_token'      => $data['stream_token'],
+        'credits_remaining' => $data['credits_remaining'] ?? 0,
+        'stream_url'        => $backend . '/api/plugin/chat/stream',
+    ];
+}
+
+/**
  * Sign in via Google ID token — backend verifies it, creates the account
  * (50 free credits if new), and returns a session token we store locally.
  *

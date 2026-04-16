@@ -50,6 +50,7 @@ function wam_init() {
 
     // AJAX handlers
     add_action( 'wp_ajax_wam_chat',           'wam_ajax_chat' );
+    add_action( 'wp_ajax_wam_stream_token',   'wam_ajax_stream_token' );
     add_action( 'wp_ajax_wam_google_signin',  'wam_ajax_google_signin' );
     add_action( 'wp_ajax_wam_register_store', 'wam_ajax_register_store' );
 }
@@ -100,10 +101,9 @@ function wam_enqueue_assets( $hook ) {
         true  // footer
     );
 
-    // Pass data to JS.
-    // sessionToken is decrypted here (needed for direct streaming calls to the backend).
-    // It is only included when the store is connected — i.e. when streaming mode is
-    // actually used — to minimise exposure in the page source.
+    // The session token and merchant email are intentionally absent from wamData.
+    // JS requests a short-lived disposable stream token via wam_ajax_stream_token
+    // (a nonce-protected AJAX call). The real session token never leaves PHP.
     $store_connected = (bool) get_option( 'wam_store_connected', false );
     wp_localize_script( 'wam-chat', 'wamData', [
         'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
@@ -111,12 +111,34 @@ function wam_enqueue_assets( $hook ) {
         'nonce'          => wp_create_nonce( 'wam_chat' ),
         'upgradeUrl'     => WAM_UPGRADE_URL,
         'version'        => WAM_VERSION,
-        // Direct-to-backend streaming mode (only active when WC credentials are registered)
         'backendUrl'     => rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' ),
-        'merchantEmail'  => $store_connected ? get_option( 'wam_merchant_email', '' ) : '',
-        'sessionToken'   => $store_connected ? wam_decrypt_token( get_option( 'wam_session_token', '' ) ) : '',
         'storeConnected' => $store_connected,
     ] );
+}
+
+// ── AJAX: stream token exchange ───────────────────────────────────────────────
+// PHP calls the backend with the real session token and receives a disposable
+// 30-second stream token that is safe to hand to the browser.
+function wam_ajax_stream_token() {
+    check_ajax_referer( 'wam_chat', 'nonce' );
+
+    if ( ! current_user_can( 'manage_woocommerce' ) ) {
+        wp_send_json_error( [ 'message' => 'Unauthorised.' ], 403 );
+    }
+
+    $message = isset( $_POST['message'] ) ? sanitize_text_field( wp_unslash( $_POST['message'] ) ) : '';
+    if ( ! $message ) {
+        wp_send_json_error( [ 'message' => 'Empty message.' ], 400 );
+    }
+
+    $result = wam_get_stream_token( $message );
+
+    if ( is_wp_error( $result ) ) {
+        $code = $result->get_error_code() === 'wam_no_credits' ? 402 : 500;
+        wp_send_json_error( [ 'message' => $result->get_error_message() ], $code );
+    }
+
+    wp_send_json_success( $result );
 }
 
 // ── AJAX: Google sign-in ──────────────────────────────────────────────────────
