@@ -106,7 +106,7 @@ function wam_recent_orders( int $limit = 5 ): array {
     foreach ( $orders as $order ) {
         $result[] = [
             'id'       => $order->get_id(),
-            'customer' => trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ) ?: $order->get_billing_email(),
+            'customer' => trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() ) ?: 'Customer #' . $order->get_id(),
             'total'    => $order->get_total(),
             'status'   => $order->get_status(),
             'date'     => $order->get_date_created() ? $order->get_date_created()->date( 'M j' ) : '—',

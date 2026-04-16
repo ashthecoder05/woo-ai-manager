@@ -100,18 +100,22 @@ function wam_enqueue_assets( $hook ) {
         true  // footer
     );
 
-    // Pass data to JS
+    // Pass data to JS.
+    // sessionToken is decrypted here (needed for direct streaming calls to the backend).
+    // It is only included when the store is connected — i.e. when streaming mode is
+    // actually used — to minimise exposure in the page source.
+    $store_connected = (bool) get_option( 'wam_store_connected', false );
     wp_localize_script( 'wam-chat', 'wamData', [
         'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
         'adminUrl'       => admin_url(),
         'nonce'          => wp_create_nonce( 'wam_chat' ),
         'upgradeUrl'     => WAM_UPGRADE_URL,
         'version'        => WAM_VERSION,
-        // Direct-to-backend mode (used when WC credentials are registered)
+        // Direct-to-backend streaming mode (only active when WC credentials are registered)
         'backendUrl'     => rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' ),
-        'merchantEmail'  => get_option( 'wam_merchant_email', '' ),
-        'sessionToken'   => get_option( 'wam_session_token', '' ),
-        'storeConnected' => (bool) get_option( 'wam_store_connected', false ),
+        'merchantEmail'  => $store_connected ? get_option( 'wam_merchant_email', '' ) : '',
+        'sessionToken'   => $store_connected ? wam_decrypt_token( get_option( 'wam_session_token', '' ) ) : '',
+        'storeConnected' => $store_connected,
     ] );
 }
 

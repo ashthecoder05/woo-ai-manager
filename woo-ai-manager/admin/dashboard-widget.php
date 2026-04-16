@@ -33,13 +33,13 @@ function wam_render_dashboard_widget() {
         <div class="wam-widget-stats">
             <div class="wam-stat">
                 <span class="wam-stat-label">Today</span>
-                <span class="wam-stat-value">$<?php echo number_format( $today['revenue'], 2 ); ?></span>
-                <span class="wam-stat-sub"><?php echo (int) $today['count']; ?> orders</span>
+                <span class="wam-stat-value">$<?php echo esc_html( number_format( $today['revenue'], 2 ) ); ?></span>
+                <span class="wam-stat-sub"><?php echo esc_html( (int) $today['count'] ); ?> orders</span>
             </div>
             <div class="wam-stat">
                 <span class="wam-stat-label">Last 7 days</span>
-                <span class="wam-stat-value">$<?php echo number_format( $week['revenue'], 2 ); ?></span>
-                <span class="wam-stat-sub"><?php echo (int) $week['count']; ?> orders</span>
+                <span class="wam-stat-value">$<?php echo esc_html( number_format( $week['revenue'], 2 ) ); ?></span>
+                <span class="wam-stat-sub"><?php echo esc_html( (int) $week['count'] ); ?> orders</span>
             </div>
         </div>
 
@@ -71,7 +71,7 @@ function wam_render_dashboard_widget() {
             </p>
         <?php elseif ( $credits <= 10 ) : ?>
             <p class="wam-widget-notice wam-widget-notice--warning">
-                <?php echo $credits; ?> queries left.
+                <?php echo esc_html( $credits ); ?> queries left.
                 <a href="<?php echo esc_url( WAM_UPGRADE_URL ); ?>" target="_blank" rel="noopener">Upgrade for unlimited →</a>
             </p>
             <p class="wam-widget-cta">
@@ -80,7 +80,7 @@ function wam_render_dashboard_widget() {
         <?php else : ?>
             <p class="wam-widget-cta">
                 <a href="<?php echo esc_url( admin_url( 'admin.php?page=wam-chat' ) ); ?>" class="button button-primary">Open AI Manager</a>
-                <span style="font-size:11px;color:#888;margin-left:8px;"><?php echo $credits; ?> queries left</span>
+                <span style="font-size:11px;color:#888;margin-left:8px;"><?php echo esc_html( $credits ); ?> queries left</span>
             </p>
         <?php endif; ?>
 

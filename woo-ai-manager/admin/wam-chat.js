@@ -68,7 +68,7 @@
                     step.className    = 'wam-step running';
                     step.dataset.tcId = event.id;
                     step.innerHTML    =
-                        '<span class="wam-step-icon">' + (event.icon || '🔍') + '</span>' +
+                        '<span class="wam-step-icon">' + escapeHtml(event.icon || '🔍') + '</span>' +
                         '<span class="wam-step-label">' + escapeHtml(event.label) + '</span>' +
                         '<span class="wam-step-status"><span class="wam-step-spinner"></span></span>';
                     steps.appendChild(step);

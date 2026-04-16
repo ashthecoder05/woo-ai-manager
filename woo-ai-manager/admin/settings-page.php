@@ -68,9 +68,9 @@ function wam_render_settings_page() {
                     <?php if ( $credits === 0 ) : ?>
                         <span class="wam-credit-badge wam-credit-empty">No queries remaining</span>
                     <?php elseif ( $credits <= 10 ) : ?>
-                        <span class="wam-credit-badge wam-credit-low"><?php echo $credits; ?> queries left</span>
+                        <span class="wam-credit-badge wam-credit-low"><?php echo esc_html( $credits ); ?> queries left</span>
                     <?php else : ?>
-                        <span class="wam-credit-badge wam-credit-ok"><?php echo $credits; ?> queries remaining</span>
+                        <span class="wam-credit-badge wam-credit-ok"><?php echo esc_html( $credits ); ?> queries remaining</span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -87,7 +87,7 @@ function wam_render_settings_page() {
             <?php elseif ( $credits <= 10 ) : ?>
                 <div class="notice notice-warning" style="margin-top:16px;">
                     <p>
-                        Only <strong><?php echo $credits; ?> queries</strong> left on your free plan.
+                        Only <strong><?php echo esc_html( $credits ); ?> queries</strong> left on your free plan.
                         <a href="<?php echo esc_url( WAM_UPGRADE_URL ); ?>" target="_blank" rel="noopener">Upgrade for unlimited access →</a>
                     </p>
                 </div>
@@ -218,8 +218,9 @@ function wam_render_settings_page() {
                 <h2 style="margin-top:0;">Get started free</h2>
                 <p>Sign in with your Google account to activate <strong>50 free AI queries</strong> — no credit card, no API key needed.</p>
                 <p style="color:#666;font-size:12px;">
-                    The AI will read your live WooCommerce data (order totals, products, stock levels)
-                    to answer your questions. No customer emails or payment details are ever sent.
+                    The AI will read your live WooCommerce data (order totals, products, stock levels,
+                    and customer first/last names) to answer your questions. No customer emails or
+                    payment details are ever sent.
                 </p>
                 <div id="wam-google-btn"></div>
                 <p id="wam-signin-error" style="color:#cc1818;display:none;margin-top:8px;"></p>
