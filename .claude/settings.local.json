@@ -105,7 +105,8 @@
       "Bash(php -S localhost:8099 /tmp/test_auth.php)",
       "Bash(curl -s \"http://localhost:8099/?rest_route=/test\" -u \"ck_abc:cs_xyz\")",
       "Bash(kill %1)",
-      "Bash(php -S localhost:8080 -t .)"
+      "Bash(php -S localhost:8080 -t .)",
+      "Bash(grep -E \"\\\\.py$|\\\\.txt$|\\\\.yaml$|\\\\.json$\")"
     ]
   }
 }

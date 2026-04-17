@@ -43,7 +43,7 @@
         var thinking = appendThinking();
         setLoading(true);
 
-        if (wamData.storeConnected && wamData.backendUrl) {
+        if (wamData.storeConnected) {
             // Streaming mode — two-step secure flow:
             //   Step 1: Ask WordPress for a disposable stream token (nonce-protected AJAX).
             //           PHP holds the real session token; we never see it.

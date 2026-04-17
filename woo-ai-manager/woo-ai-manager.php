@@ -111,7 +111,6 @@ function wam_enqueue_assets( $hook ) {
         'nonce'          => wp_create_nonce( 'wam_chat' ),
         'upgradeUrl'     => WAM_UPGRADE_URL,
         'version'        => WAM_VERSION,
-        'backendUrl'     => rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' ),
         'storeConnected' => $store_connected,
     ] );
 }
@@ -159,6 +158,9 @@ function wam_ajax_google_signin() {
     if ( is_wp_error( $result ) ) {
         wp_send_json_error( [ 'message' => $result->get_error_message() ], 401 );
     }
+
+    // Strip the session token — it must never leave PHP / reach the browser.
+    unset( $result['session_token'] );
 
     wp_send_json_success( $result );
 }
