@@ -106,7 +106,16 @@
       "Bash(curl -s \"http://localhost:8099/?rest_route=/test\" -u \"ck_abc:cs_xyz\")",
       "Bash(kill %1)",
       "Bash(php -S localhost:8080 -t .)",
-      "Bash(grep -E \"\\\\.py$|\\\\.txt$|\\\\.yaml$|\\\\.json$\")"
+      "Bash(grep -E \"\\\\.py$|\\\\.txt$|\\\\.yaml$|\\\\.json$\")",
+      "Bash(ls -la .env*)",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\")",
+      "Bash(dig heysarva.com A +short)",
+      "Bash(nslookup heysarva.com)",
+      "Bash(curl -sI https://heysarva.com)",
+      "Bash(curl -s http://2.24.209.83)",
+      "Bash(dig @josephine.ns.cloudflare.com heysarva.com A +short)",
+      "Bash(dig heysarva.com NS +short)",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_urlsafe\\(24\\)\\)\")"
     ]
   }
 }

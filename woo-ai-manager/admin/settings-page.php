@@ -287,7 +287,7 @@ function wam_render_settings_page() {
             <div class="notice notice-error inline">
                 <p>
                     Cannot reach the server. Make sure the backend is running and reload this page.
-                    If this keeps happening, contact <a href="mailto:PLACEHOLDER_SUPPORT_EMAIL">support</a>.
+                    If this keeps happening, contact <a href="mailto:hello@heysarva.com">support</a>.
                 </p>
             </div>
         <?php endif; ?>

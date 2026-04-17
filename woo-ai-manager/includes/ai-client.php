@@ -10,7 +10,7 @@
 defined( 'ABSPATH' ) || exit;
 
 // Your backend URL — change this before distributing the plugin
-define( 'WAM_DEFAULT_BACKEND', 'http://localhost:8000' );
+define( 'WAM_DEFAULT_BACKEND', 'https://heysarva.com' );
 
 // ── Security helpers ──────────────────────────────────────────────────────────
 
