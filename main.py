@@ -23,7 +23,7 @@ from services.db import (
     get_recent_orders, get_merchant_analytics, get_order,
     mark_merchant_verified, check_and_increment_chat, get_wc_webhook_secret,
     check_and_decrement_plugin_credits, get_plugin_credits,
-    save_wc_credentials, get_wc_credentials,
+    save_wc_credentials, get_wc_credentials, delete_wc_credentials,
 )
 from webhook.handler import router as webhook_router
 from telegram_bot.bot import start_bot, stop_bot, is_running as tg_is_running, get_running_bots
@@ -34,13 +34,6 @@ MERCHANT_URL    = os.getenv("MERCHANT_URL", "http://localhost:8000")
 DAILY_CHAT_LIMIT = int(os.getenv("DAILY_CHAT_LIMIT", "50"))  # messages per merchant per day
 ENVIRONMENT  = os.getenv("ENVIRONMENT", "development")
 ALLOWED_ORIGINS_RAW = os.getenv("ALLOWED_ORIGINS", "")
-if ENVIRONMENT == "production" and not ALLOWED_ORIGINS_RAW:
-    raise RuntimeError("ALLOWED_ORIGINS must be set in production (do not use '*')")
-ALLOWED_ORIGINS: list[str] = (
-    [o.strip() for o in ALLOWED_ORIGINS_RAW.split(",") if o.strip()]
-    if ALLOWED_ORIGINS_RAW
-    else ["*"]
-)
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 
@@ -83,10 +76,14 @@ if _tg_env_token:
     logger.info("Telegram bot auto-started from TELEGRAM_BOT_TOKEN env var.")
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
+# Every store owner's WP Admin runs on their own domain, so the plugin's
+# browser-side streaming needs cross-origin access. Auth is handled by
+# disposable stream tokens (30s TTL, single-use), not cookies/sessions,
+# so allowing all origins is safe.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["GET", "POST"],
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
     allow_credentials=False,
 )
@@ -791,6 +788,32 @@ async def plugin_register(req: WCRegisterRequest, request: Request):
     return {"status": "ok", "message": "Store connected. Live data mode is now active.", "store_url": req.store_url}
 
 
+class DisconnectRequest(BaseModel):
+    email: str
+    token: str
+
+
+@app.post("/api/plugin/disconnect")
+async def plugin_disconnect(req: DisconnectRequest, request: Request):
+    """
+    Called by the WordPress plugin on sign-out.
+    Deletes the merchant's stored WC credentials so the backend
+    stops trying to call their store's REST API.
+    """
+    ip = _client_ip(request)
+    if not _check_rate(ip, max_requests=10, window_seconds=60):
+        raise HTTPException(status_code=429, detail="Too many requests.")
+
+    email = req.email.strip().lower()
+    if not _verify_session_token(email, req.token):
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    delete_wc_credentials(email)
+    logger.info("WC credentials deleted (disconnect) | email=%s", email)
+
+    return {"status": "ok", "message": "Store disconnected."}
+
+
 class StreamTokenRequest(BaseModel):
     email: str
     token: str   # the long-lived session token — arrives from PHP, never from a browser
@@ -861,7 +884,9 @@ async def plugin_chat(req: PluginChatRequest, request: Request):
         )
 
     try:
-        wc_creds = get_wc_credentials(email)
+        # If the plugin sent a store snapshot, use it (basic mode).
+        # Only use WC tools when no snapshot is provided (advanced mode).
+        wc_creds = get_wc_credentials(email) if not req.store_context else None
         if wc_creds:
             # MCP mode: AI calls WC REST API tools dynamically
             from agent.core import plugin_chat_with_wc_tools

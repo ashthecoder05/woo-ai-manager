@@ -19,10 +19,15 @@ function wam_render_settings_page() {
         if ( ! current_user_can( 'manage_options' ) ) {
             wp_die( 'Unauthorised.' );
         }
+        // Tell the backend to delete WC credentials BEFORE clearing the local token
+        wam_disconnect_backend();
         delete_option( 'wam_merchant_email' );
         delete_option( 'wam_merchant_name' );
         delete_option( 'wam_session_token' );
         delete_option( 'wam_credits_remaining' );
+        delete_option( 'wam_store_connected' );
+        delete_option( 'wam_store_url' );
+        delete_transient( 'wam_google_client_id' );
         add_settings_error( 'wam_settings', 'disconnected', 'Signed out successfully.', 'updated' );
     }
 

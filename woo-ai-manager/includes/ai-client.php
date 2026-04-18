@@ -277,6 +277,34 @@ function wam_get_stream_token( string $user_message ) {
 }
 
 /**
+ * Tell the backend to delete stored WC credentials for this merchant.
+ * Called on sign-out so the backend stops trying to call the store's REST API.
+ */
+function wam_disconnect_backend() {
+    $email   = get_option( 'wam_merchant_email', '' );
+    $token   = wam_decrypt_token( get_option( 'wam_session_token', '' ) );
+    $backend = rtrim( get_option( 'wam_backend_url', WAM_DEFAULT_BACKEND ), '/' );
+
+    if ( ! $email || ! $token ) {
+        return; // nothing to disconnect
+    }
+
+    if ( ! wam_is_safe_backend_url( $backend ) ) {
+        return;
+    }
+
+    // Best-effort — don't block sign-out if the backend is unreachable
+    wp_remote_post( $backend . '/api/plugin/disconnect', [
+        'timeout' => 5,
+        'headers' => [ 'Content-Type' => 'application/json' ],
+        'body'    => wp_json_encode( [
+            'email' => $email,
+            'token' => $token,
+        ] ),
+    ] );
+}
+
+/**
  * Sign in via Google ID token — backend verifies it, creates the account
  * (50 free credits if new), and returns a session token we store locally.
  *

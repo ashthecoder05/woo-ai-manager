@@ -148,10 +148,12 @@ def init_db() -> None:
                 wc_webhook_secret TEXT,
                 daily_chat_count INTEGER NOT NULL DEFAULT 0,
                 chat_count_date  TEXT,
+                plugin_credits   INTEGER NOT NULL DEFAULT 50,
                 created_at       TEXT    NOT NULL,
                 updated_at       TEXT    NOT NULL
             )
         """)
+        conn.commit()
         # Safe migrations — add new columns to existing deployments
         for col, definition in [
             ("is_verified",       "INTEGER NOT NULL DEFAULT 0"),
@@ -164,7 +166,7 @@ def init_db() -> None:
                 _execute(conn, f"ALTER TABLE merchants ADD COLUMN {col} {definition}")
                 conn.commit()
             except Exception:
-                pass  # column already exists
+                conn.rollback()  # PostgreSQL requires rollback after failed statement
         _execute(conn, f"""
             CREATE TABLE IF NOT EXISTS payment_events (
                 id              {pk},
@@ -254,6 +256,17 @@ def get_wc_credentials(email: str) -> dict | None:
         return _fetchone(conn,
             f"SELECT store_url, consumer_key, consumer_secret FROM merchant_wc_credentials WHERE merchant_email = {ph}",
             (email.lower(),))
+
+
+def delete_wc_credentials(email: str) -> None:
+    """Delete stored WC credentials for a merchant."""
+    init_db()
+    ph = _ph()
+    with _connect() as conn:
+        _execute(conn,
+            f"DELETE FROM merchant_wc_credentials WHERE merchant_email = {ph}",
+            (email.lower(),))
+        conn.commit()
 
 
 # ── Merchants ──────────────────────────────────────────────────────────────────
