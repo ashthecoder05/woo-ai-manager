@@ -4,7 +4,7 @@
 
 We take security seriously. If you discover a security vulnerability, please **do not open a public issue**.
 
-Instead, report it privately using GitHub's [private vulnerability reporting](https://github.com/ashthecoder05/AgentHackathon/security/advisories/new), or contact the maintainers directly.
+Instead, report it privately using GitHub's [private vulnerability reporting](https://github.com/ashthecoder05/woo-ai-manager/security/advisories/new), or contact the maintainers directly.
 
 Please include:
 

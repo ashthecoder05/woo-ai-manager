@@ -74,8 +74,8 @@ The plugin collects store data in WP Admin and sends it to the backend, which ca
 
 ```bash
 # 1. Clone
-git clone https://github.com/ashthecoder05/AgentHackathon.git
-cd AgentHackathon
+git clone https://github.com/ashthecoder05/woo-ai-manager.git
+cd woo-ai-manager
 
 # 2. Set up environment
 python -m venv .venv

@@ -16,8 +16,8 @@ By participating, you agree to abide by our [Code of Conduct](./CODE_OF_CONDUCT.
 ### Backend (Python)
 
 ```bash
-git clone https://github.com/ashthecoder05/AgentHackathon.git
-cd AgentHackathon
+git clone https://github.com/ashthecoder05/woo-ai-manager.git
+cd woo-ai-manager
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
