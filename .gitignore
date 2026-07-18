@@ -26,9 +26,11 @@ venv/
 env/
 ENV/
 
-# IDE
+# IDE / AI assistant local config
 .vscode/
 .idea/
+.claude/
+.cursor/
 *.swp
 *.swo
 .DS_Store
