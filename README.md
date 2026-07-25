@@ -4,8 +4,10 @@ HeySarva is an open-source AI store manager that lives inside your WordPress/Woo
 
 > "Summarise this week's sales" · "Which orders are stuck?" · "What's running low on stock?"
 
+[![CI](https://github.com/ashthecoder05/woo-ai-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/ashthecoder05/woo-ai-manager/actions/workflows/ci.yml)
 [![License: GPL v2](https://img.shields.io/badge/License-GPLv2-blue.svg)](./LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+[![Good First Issues](https://img.shields.io/github/issues/ashthecoder05/woo-ai-manager/good%20first%20issue?label=good%20first%20issues&color=7057ff)](https://github.com/ashthecoder05/woo-ai-manager/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 ---
 
