@@ -6,6 +6,14 @@
   <title>HeySarva — Your AI Store Manager, Inside WooCommerce</title>
   <meta name="description" content="HeySarva is an AI store manager that lives inside your WooCommerce admin. Ask about revenue, orders, stock, and get instant answers."/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>"/>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-2QM940ZPPK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-2QM940ZPPK');
+  </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -58,8 +66,8 @@
     .nav-cta {
       font-size: 0.875rem; font-weight: 600;
       padding: 0.45rem 1.1rem; border-radius: 8px;
-      background: var(--orange); color: #000;
-      text-decoration: none; transition: background 0.15s;
+      background: var(--orange); color: #000 !important;
+      text-decoration: none !important; transition: background 0.15s;
     }
     .nav-cta:hover { background: var(--orange2); }
 
@@ -111,10 +119,10 @@
 
     .btn-primary {
       padding: 0.85rem 2rem; border: none; border-radius: 12px;
-      background: var(--orange); color: #000;
+      background: var(--orange); color: #000 !important;
       font-size: 1rem; font-weight: 700; cursor: pointer;
       transition: background 0.15s, transform 0.1s;
-      text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+      text-decoration: none !important; display: inline-flex; align-items: center; gap: 0.5rem;
     }
     .btn-primary:hover { background: var(--orange2); transform: translateY(-1px); }
 
@@ -392,8 +400,8 @@
   </p>
 
   <div class="hero-buttons">
-    <a href="https://wordpress.org/plugins/woo-ai-manager/" class="btn-primary">
-      Try HeySarva Free
+    <a href="/woo-ai-manager.zip" class="btn-primary" download>
+      Download Plugin Free
     </a>
     <a href="#preview" class="btn-secondary">
       See it in action
@@ -569,7 +577,7 @@
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-title">Install the plugin</div>
-      <div class="step-desc">Search "HeySarva" in your WordPress plugin directory. Click Install, then Activate.</div>
+      <div class="step-desc">Download the ZIP, go to Plugins → Add New → Upload Plugin in your WP Admin. Activate it.</div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
@@ -668,8 +676,8 @@
       <li>Google sign-in (no API keys)</li>
       <li>End-to-end encryption</li>
     </ul>
-    <a href="https://wordpress.org/plugins/woo-ai-manager/" class="btn-primary" style="width:100%;justify-content:center;">
-      Install Free Plugin
+    <a href="/woo-ai-manager.zip" class="btn-primary" style="width:100%;justify-content:center;" download>
+      Download Free Plugin
     </a>
     <p style="font-size:0.72rem;color:var(--muted2);margin-top:0.75rem;">Paid plans coming soon for unlimited queries.</p>
   </div>
@@ -681,14 +689,15 @@
   <p style="color:var(--muted);font-size:1rem;max-width:440px;line-height:1.65;">
     Install HeySarva in 30 seconds and get an AI store manager that knows your WooCommerce store inside out.
   </p>
-  <a href="https://wordpress.org/plugins/woo-ai-manager/" class="btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem;">
-    Try HeySarva Free
+  <a href="/woo-ai-manager.zip" class="btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem;" download>
+    Download HeySarva Free
   </a>
 </section>
 
 <footer>
   Built for WooCommerce store owners &middot; Powered by AI &middot;
-  <a href="mailto:hello@heysarva.com">hello@heysarva.com</a>
+  <a href="mailto:hello@heysarva.com">hello@heysarva.com</a> &middot;
+  <a href="/privacy.html">Privacy Policy</a>
   <br/>&copy; 2026 HeySarva. All rights reserved.
 </footer>
 

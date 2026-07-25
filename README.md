@@ -108,6 +108,14 @@ docker compose up --build
 
 See [`woo-ai-manager/readme.txt`](./woo-ai-manager/readme.txt) for plugin details.
 
+**Building the distributable zip** (served by the backend at `/woo-ai-manager.zip` for the landing-page download button):
+
+```bash
+./scripts/build-plugin-zip.sh
+```
+
+The zip is not committed to git — rebuild it as part of your deploy.
+
 ## Configuration
 
 All backend configuration is via environment variables. Copy [`.env.example`](./.env.example) to `.env` and fill in your values. **Never commit `.env`.**

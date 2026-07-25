@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Privacy Policy — HeySarva</title>
+  <meta name="description" content="HeySarva privacy policy — how we handle your WooCommerce store data."/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --card: #161616;
+      --border: #222222; --orange: #f7931a; --text: #f0f0f0;
+      --muted: #888; --muted2: #555;
+    }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; line-height: 1.7;
+    }
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+      background: rgba(10,10,10,0.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 1.15rem; font-weight: 800; color: var(--text);
+      text-decoration: none;
+    }
+    .nav-logo span { color: var(--orange); }
+    .content {
+      max-width: 720px; margin: 0 auto;
+      padding: 100px 1.5rem 80px;
+    }
+    h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .updated { color: var(--muted); font-size: 0.875rem; margin-bottom: 2rem; }
+    h2 {
+      font-size: 1.2rem; font-weight: 700; margin-top: 2rem; margin-bottom: 0.5rem;
+      color: var(--orange);
+    }
+    p, li { color: #ccc; font-size: 0.95rem; margin-bottom: 0.75rem; }
+    ul { padding-left: 1.25rem; margin-bottom: 1rem; }
+    li { margin-bottom: 0.4rem; }
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); }
+    .footer {
+      text-align: center; padding: 2rem; font-size: 0.8rem; color: var(--muted2);
+      border-top: 1px solid var(--border); margin-top: 3rem;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">Hey<span>Sarva</span></a>
+</nav>
+
+<div class="content">
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: April 18, 2026</p>
+
+  <p>HeySarva ("we", "us", "our") operates the HeySarva WordPress plugin and the backend service at heysarva.com. This policy explains what data we collect, how we use it, and your rights.</p>
+
+  <h2>1. What We Collect</h2>
+  <p>When you use the HeySarva plugin, the following data is sent to our servers:</p>
+  <ul>
+    <li><strong>Google account info</strong> — your name and email address (used for sign-in and account identification)</li>
+    <li><strong>Store snapshot data</strong> — revenue totals, recent order summaries (customer first/last name, order total, status), top-selling products, and low-stock items</li>
+    <li><strong>Your chat messages</strong> — the questions you ask the AI</li>
+    <li><strong>WooCommerce API keys</strong> — only if you opt in to Advanced mode (stored encrypted)</li>
+  </ul>
+
+  <h2>2. What We Do NOT Collect</h2>
+  <ul>
+    <li>Customer email addresses</li>
+    <li>Customer physical addresses or phone numbers</li>
+    <li>Payment or credit card details</li>
+    <li>Passwords</li>
+    <li>Full order line-item details (unless queried in Advanced mode, and not stored)</li>
+  </ul>
+
+  <h2>3. How We Use Your Data</h2>
+  <ul>
+    <li><strong>To answer your questions</strong> — store data and your message are sent to Azure OpenAI to generate a response. This data is not stored after the response is returned.</li>
+    <li><strong>To manage your account</strong> — your email and credit balance are stored in our database.</li>
+    <li><strong>To improve the service</strong> — we track anonymised usage counts (number of chats per day). We do not store the content of your messages or AI responses.</li>
+  </ul>
+
+  <h2>4. Data Storage &amp; Security</h2>
+  <ul>
+    <li>Your session token is encrypted with AES-256-CBC before being stored in WordPress</li>
+    <li>WooCommerce API keys (Advanced mode) are stored encrypted in our PostgreSQL database</li>
+    <li>All communication between the plugin and our servers uses HTTPS/TLS</li>
+    <li>Our servers are protected by Cloudflare and UFW firewall</li>
+    <li>Database access is restricted to internal Docker networks only</li>
+  </ul>
+
+  <h2>5. Third-Party Services</h2>
+  <ul>
+    <li><strong>Google Sign-In</strong> — used for authentication. Subject to <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</li>
+    <li><strong>Azure OpenAI</strong> — used to generate AI responses. Your data is processed under <a href="https://learn.microsoft.com/en-us/legal/cognitive-services/openai/data-privacy" target="_blank" rel="noopener">Microsoft's data privacy terms</a>. Azure OpenAI does not use your data to train models.</li>
+    <li><strong>Cloudflare</strong> — used for CDN, SSL, and DDoS protection. Subject to <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare's Privacy Policy</a>.</li>
+  </ul>
+
+  <h2>6. Data Retention</h2>
+  <ul>
+    <li><strong>Account data</strong> (email, name, credits) — retained while your account is active</li>
+    <li><strong>Chat content</strong> — not stored. Processed in-memory and discarded after each response.</li>
+    <li><strong>WC API keys</strong> — retained until you disconnect your store or sign out</li>
+    <li><strong>Usage stats</strong> — anonymised chat counts retained indefinitely for analytics</li>
+  </ul>
+
+  <h2>7. Your Rights</h2>
+  <p>You can:</p>
+  <ul>
+    <li><strong>Sign out</strong> from the plugin settings to delete your session and stored WC credentials</li>
+    <li><strong>Request data deletion</strong> — email <a href="mailto:hello@heysarva.com">hello@heysarva.com</a> and we will delete your account and all associated data within 30 days</li>
+    <li><strong>Export your data</strong> — email us to request a copy of all data we hold about you</li>
+  </ul>
+
+  <h2>8. Cookies</h2>
+  <p>The HeySarva plugin does not set any cookies. The landing page (heysarva.com) does not use cookies or tracking scripts. Cloudflare may set a technical cookie (<code>__cf_bm</code>) for bot protection.</p>
+
+  <h2>9. Children's Privacy</h2>
+  <p>HeySarva is a business tool for WooCommerce store owners. We do not knowingly collect data from children under 13. If you believe a child has provided us data, contact us and we will delete it.</p>
+
+  <h2>10. Changes to This Policy</h2>
+  <p>We may update this policy from time to time. Changes will be posted on this page with an updated date. Continued use of the plugin after changes constitutes acceptance.</p>
+
+  <h2>11. Contact</h2>
+  <p>Questions about this privacy policy? Email us at <a href="mailto:hello@heysarva.com">hello@heysarva.com</a>.</p>
+</div>
+
+<div class="footer">
+  &copy; 2026 HeySarva. All rights reserved.
+</div>
+
+</body>
+</html>

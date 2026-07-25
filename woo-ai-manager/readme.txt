@@ -1,5 +1,5 @@
 === Woo AI Manager ===
-Contributors:       PLACEHOLDER_WP_USERNAME
+Contributors:       aishwaryaadyanthaya
 Author:             Aishwarya Adyanthaya
 Tags:               woocommerce, ai, store manager, analytics, chatbot
 Requires at least:  6.0
@@ -42,7 +42,7 @@ It reads your live WooCommerce data — orders, revenue, products, stock — and
 
 = Privacy =
 
-Your store data (order totals, product names, stock levels) is sent to our servers to generate AI responses. We never store your customer names or emails beyond the current request. See our privacy policy at PLACEHOLDER_PRIVACY_URL.
+Your store data (order totals, product names, stock levels) is sent to our servers to generate AI responses. We never store your customer names or emails beyond the current request. See our privacy policy at https://heysarva.com/privacy.html.
 
 == Installation ==
 
@@ -65,7 +65,7 @@ Revenue totals, recent orders (customer name, total, status), top products, and 
 
 = What happens when I use all 50 free queries? =
 
-You can upgrade to a paid plan at PLACEHOLDER_UPGRADE_URL to continue.
+You can upgrade to a paid plan at https://heysarva.com/#pricing to continue.
 
 = Is my data secure? =
 
