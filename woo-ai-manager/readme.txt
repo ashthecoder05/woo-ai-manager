@@ -84,11 +84,11 @@ Yes — the plugin automatically detects whether your store uses High-Performanc
 == Changelog ==
 
 = 0.1.0 =
-* Initial release
-* Google SSO sign-in with 50 free queries
-* Live store context: revenue, orders, top products, low stock
-* WP Admin chat panel with quick-action buttons
-* Dashboard widget
+* Initial release featuring the core WordPress plugin and FastAPI backend.
+* Google SSO sign-in with 50 free queries — no API key or credit card required.
+* Live store context: revenue snapshots, recent orders, top products, and low-stock alerts.
+* WP Admin chat panel with quick-action buttons.
+* Dashboard widget showing today's revenue and stock alerts.
 
 == Upgrade Notice ==
 
